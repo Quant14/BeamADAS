@@ -1,9 +1,13 @@
-#This script will gather sensor information from BeamNG.tech and send it to the external controller for processing
+# This script will gather sensor information from BeamNG.tech and send it to the external controller for processing
+import os
 from beamngpy import BeamNGpy, Scenario, Vehicle
+
+# Open BeamNG.tech home directory
+home = open(os.path.join( os.getcwd(), "bngtechdir.txt"), "r")
 
 # Instantiate BeamNGpy instance running the simulator from the given path,
 # communicating over localhost:4771
-bng = BeamNGpy('localhost', 4771, home='..\\bngtechdir.txt', user='..\\bngtechuserdir.txt')
+bng = BeamNGpy('localhost', 4771, home=home.readline())
 
 bng.open()
 
@@ -18,5 +22,8 @@ scenario.make(bng)
 bng.scenario.load(scenario)
 bng.scenario.start()
 
-vehicle.ai.set_mode('span')
+# vehicle.ai.set_mode('span')
 input('Hit enter when done')
+
+bng.close()
+home.close()
