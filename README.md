@@ -12,3 +12,9 @@ This is a project, aimed at developing a realistic ADAS system using BeamNG.tech
 
 ### Relation between host and processor
 The host uses BeamNGpy to get live sensor data from BeamNG.tech and send it to the processor (separate microcomputer, connected to the host via USB). The processor calculates the adjustments that need to be made to the inputs of the vehicle and sends them back to the host. The host can then apply those changes to the vehicle inputs inside the simulation. 
+
+### Progress log
+#### Day 1
+Project organization and requirements, installation of BeamNG.tech and initial setup.
+#### Day 2
+Project organization and LiDAR research, simple LiDAR setup in different situations.
