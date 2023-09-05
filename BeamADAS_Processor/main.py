@@ -8,17 +8,19 @@ import cv2
 import glob
 import os
 
+img = cv2.imread('C:\\BeamADAS\\test_img.png')
+
 def birdeye_view(img):
     img_size = (img.shape[1], img.shape[0])
-    offset = 450
+    offset = 300
 
     # Source points taken from images with straight lane lines, these are to become parallel after the warp transform
     # Needs to be updated with accurate lane coordinates
     src = np.array([
-        (190, 720), # bottom-left corner
-        (596, 447), # top-left corner
-        (685, 447), # top-right corner
-        (1125, 720) # bottom-right corner
+        (430, 520), # bottom-left corner
+        (630, 360), # top-left corner
+        (645, 360), # top-right corner
+        (875, 520) # bottom-right corner
     ], dtype='f')
     dst = np.array([
         [offset, img_size[1]],             # bottom-left corner
@@ -34,9 +36,13 @@ def birdeye_view(img):
    
     return warped, M_inv
 
+# Test 1 - successful
+# birdeye_img, M_inv = birdeye_view(img)
+# plt.imsave('birdeye_img.png', birdeye_img)
+
 def binary_threshold(img):
     # Transform to gray scale
-    gray = cv2.cvtColor(img, cv2.COLOR_BAYER_BGGR2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # Apply sobel in x direction (detect vertical lines)
     sobelx = cv2.Sobel(gray, 6, 1, 0)
     abs_sobelx = np.absolute(sobelx)
@@ -48,7 +54,7 @@ def binary_threshold(img):
 
     # Detect white pixels
     white_binary = np.zeros_like(gray)
-    white_binary[(gray > 200) & (gray <= 255)] = 1
+    white_binary[(gray > 160) & (gray <= 255)] = 1
 
     # Convert to HLS
     hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
@@ -57,17 +63,23 @@ def binary_threshold(img):
 
     # Detect high saturation
     sat_binary = np.zeros_like(S)
-    sat_binary[(S > 90) & (S <= 255)] = 1
+    sat_binary[(S > 50) & (S <= 255)] = 1
 
     # Detect yellow pixels
     hue_binary = np.zeros_like(H)
-    hue_binary[(H > 10) & (H <= 25)] = 1
+    hue_binary[(H > 15) & (H <= 25)] = 1
 
     # Combine results
     binary_1 = cv2.bitwise_or(sx_binary, white_binary)
-    binary_2 = cv2.bitwise_or(hue_binary, sat_binary)
+    # binary_2 = cv2.bitwise_or(hue_binary, sat_binary)
     
-    return cv2.bitwise_or(binary_1, binary_2)
+    # return cv2.bitwise_or(binary_1, binary_2)
+    return binary_1
+
+# Test 2 - successful
+# binary = binary_threshold(img)
+# out_img = np.dstack((binary, binary, binary))*255 # type: ignore
+# plt.imsave('binary_img_no_yellow.png', out_img)
 
 def detect_lane_lines(binary_birdeye):
     # Make histogram of bottom half of img
@@ -142,6 +154,3 @@ def fit_poly(binary_birdeye, leftx, lefty, rightx, righty):
 
     return left_fit, right_fit, left_fitx, right_fitx, ploty
 # todo
-
-img = cv2.imread('C:\\Users\\RUI1SF\\Pictures\\highway_hood.png')
-birdeye_view(img)
