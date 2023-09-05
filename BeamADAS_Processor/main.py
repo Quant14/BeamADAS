@@ -8,7 +8,7 @@ import cv2
 import glob
 import os
 
-img = cv2.imread('C:\\BeamADAS\\test_img.png')
+img = cv2.imread('.\\test_curve1.png')
 
 def birdeye_view(img):
     img_size = (img.shape[1], img.shape[0])
@@ -37,8 +37,8 @@ def birdeye_view(img):
     return warped, M_inv
 
 # Test 1 - successful
-# birdeye_img, M_inv = birdeye_view(img)
-# plt.imsave('birdeye_img.png', birdeye_img)
+birdeye_img, M_inv = birdeye_view(img)
+plt.imsave('birdeye_img.png', birdeye_img)
 
 def binary_threshold(img):
     # Transform to gray scale
@@ -50,7 +50,7 @@ def binary_threshold(img):
     scaled_sobel = np.uint8(255*abs_sobelx/np.max(abs_sobelx))
     sx_binary = np.zeros_like(scaled_sobel)
     
-    sx_binary[(scaled_sobel >= 30) & (scaled_sobel <= 255)] = 1
+    sx_binary[(scaled_sobel >= 120) & (scaled_sobel <= 255)] = 1
 
     # Detect white pixels
     white_binary = np.zeros_like(gray)
@@ -77,9 +77,9 @@ def binary_threshold(img):
     return binary_1
 
 # Test 2 - successful
-# binary = binary_threshold(img)
-# out_img = np.dstack((binary, binary, binary))*255 # type: ignore
-# plt.imsave('binary_img_no_yellow.png', out_img)
+binary = binary_threshold(img)
+out_img = np.dstack((binary, binary, binary))*255 # type: ignore
+plt.imsave('binary_img_no_yellow.png', out_img)
 
 def detect_lane_lines(binary_birdeye):
     # Make histogram of bottom half of img
@@ -91,8 +91,8 @@ def detect_lane_lines(binary_birdeye):
     right_base = np.argmax(histogram[midpoint:]) + midpoint
 
     nwindows = 9
-    margin = 150
-    minpix = 75
+    margin = 100
+    minpix = 50
 
     window_h = np.int32(binary_birdeye.shape[0]//nwindows)
 
@@ -153,4 +153,43 @@ def fit_poly(binary_birdeye, leftx, lefty, rightx, righty):
         right_fitx = ploty**2 + ploty
 
     return left_fit, right_fit, left_fitx, right_fitx, ploty
+
+# def draw_poly_lines(binary_warped, left_fitx, right_fitx, ploty):     
+#     # Create an image to draw on and an image to show the selection window
+#     out_img = np.dstack((binary_warped, binary_warped, binary_warped))*255
+#     window_img = np.zeros_like(out_img)
+        
+#     margin = 100
+#     # Generate a polygon to illustrate the search window area
+#     # And recast the x and y points into usable format for cv2.fillPoly()
+#     left_line_window1 = np.array([np.transpose(np.vstack([left_fitx-margin, ploty]))])
+#     left_line_window2 = np.array([np.flipud(np.transpose(np.vstack([left_fitx+margin, 
+#                               ploty])))])
+#     left_line_pts = np.hstack((left_line_window1, left_line_window2))
+#     right_line_window1 = np.array([np.transpose(np.vstack([right_fitx-margin, ploty]))])
+#     right_line_window2 = np.array([np.flipud(np.transpose(np.vstack([right_fitx+margin, 
+#                               ploty])))])
+#     right_line_pts = np.hstack((right_line_window1, right_line_window2))
+
+#     # Draw the lane onto the warped blank image
+#     cv2.fillPoly(window_img, np.int_([left_line_pts]), (100, 100, 0))
+#     cv2.fillPoly(window_img, np.int_([right_line_pts]), (100, 100, 0))
+#     result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
+    
+#     # Plot the polynomial lines onto the image
+#     plt.plot(left_fitx, ploty, color='green')
+#     plt.plot(right_fitx, ploty, color='blue')
+#     ## End visualization steps ##
+#     return result
+    
+binary_birdeye, M_inv = birdeye_view(binary)
+plt.imsave('binary_birdeye.png', binary_birdeye)
+# leftx, lefty, rightx, righty = find_lane_pixels_using_histogram(binary_warped)
+# left_fit, right_fit, left_fitx, right_fitx, ploty = fit_poly(binary_warped,leftx, lefty, rightx, righty)
+# print(left_fit)
+# out_img = draw_poly_lines(binary_warped, left_fitx, right_fitx, ploty)
+# plt.imshow(out_img)
+
+# plt.imshow(out_img, cmap='gray')
+# plt.show()
 # todo
