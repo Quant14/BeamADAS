@@ -31,5 +31,6 @@ Project organization and LiDAR research, simple LiDAR setup in different situati
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/countryside_outside.png?raw=true" width=60%>
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/town_hood.png?raw=true" width=60%>
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/town_outside.png?raw=true" width=60%>
+
 #### 30th Aug 2023
 Project organization and requirements, installation of BeamNG.tech and initial setup.
