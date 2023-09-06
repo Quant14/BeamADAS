@@ -22,6 +22,7 @@ Camera specification research, started implementing road curvature detection bas
 https://github.com/OanaGaskey/Advanced-Lane-Detection
 #### 31st Aug 2023
 Project organization and LiDAR research, simple LiDAR setup in different situations. Screenshots made inside BeamNG.tech.
+
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/highway_hood.png?raw=true" width=60%>
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/highway_outside.png?raw=true" width=60%>
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/countryside_hood.png?raw=true" width=60%>
