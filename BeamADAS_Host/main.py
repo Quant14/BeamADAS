@@ -47,7 +47,7 @@ camera = Camera('camera',
                 requested_update_time=0.03, 
                 pos=(0, -0.35, 1.3), 
                 resolution=(1280, 720), 
-                field_of_view_y=70, 
+                field_of_view_y=60, 
                 near_far_planes=(0.05, 200), 
                 is_render_colours=True, 
                 is_render_annotations=False, 
@@ -56,20 +56,21 @@ camera = Camera('camera',
 time.sleep(30)
 
 # print(lidar.poll())
+input('Hit enter to start camera')
 for i in range(0, 30, 1):
     data = camera.poll()
     # print('cnt')
     plt.imsave('img' + str(i) + '.png', np.asarray(data['colour'].convert('RGB')))
 
 # vehicle.ai.set_mode('span')
-input('Hit enter when done')
+input('Hit enter to take final frame')
 
 # print(lidar.poll())
 # data = camera.poll()
 data = camera.poll()
 plt.imsave('img30.png', np.asarray(data['colour'].convert('RGB')))
 
-# lidar.remove()
+lidar.remove()
 camera.remove()
 bng.close()
 home.close()
