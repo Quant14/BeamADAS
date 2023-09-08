@@ -14,16 +14,16 @@ This is a project, aimed at developing a realistic ADAS system using BeamNG.tech
 The host uses BeamNGpy to get live sensor data from BeamNG.tech and send it to the processor (separate microcomputer, connected to the host via USB). The processor calculates the adjustments that need to be made to the inputs of the vehicle and sends them back to the host. The host can then apply those changes to the vehicle inputs inside the simulation. 
 
 ## Progress log
-#### 5th Sep 2023
+#### 4-8th Sep 2023
+Adjusted camera sensor FOV and adjusted road curvature algorithm for new road position.
 Performed successful testing and adjustment of initial stages of road curvature detection algorithm.
-#### 4th Sep 2023
 Simple camera setup inside BeamNG.tech, generated test images, continued work on road curvature detection.
-#### 1st Sep 2023
+#### 30th Aug - 1st Sep 2023
 Camera specification research, started implementing road curvature detection based on:
 
 https://github.com/OanaGaskey/Advanced-Lane-Detection
-#### 31st Aug 2023
-Project organization and LiDAR research, simple LiDAR setup in different situations. Screenshots made inside BeamNG.tech.
+
+LiDAR research, simple LiDAR setup in different situations. Screenshots made inside BeamNG.tech.
 
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/highway_hood.png?raw=true" width=60%>
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/highway_outside.png?raw=true" width=60%>
@@ -32,5 +32,4 @@ Project organization and LiDAR research, simple LiDAR setup in different situati
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/town_hood.png?raw=true" width=60%>
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/town_outside.png?raw=true" width=60%>
 
-#### 30th Aug 2023
 Project organization and requirements, installation of BeamNG.tech and initial setup.
