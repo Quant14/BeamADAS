@@ -8,7 +8,8 @@ import cv2
 import glob
 import os
 
-img = cv2.imread('.\\test_img.png')
+img = cv2.imread('.\\test_curve_1.png')
+img2 = cv2.imread('.\\test_curve_2.png')
 
 def birdeye_view(img):
     img_size = (img.shape[1], img.shape[0])
@@ -85,6 +86,8 @@ plt.imsave('binary_img_no_yellow.png', out_img)
 binary_birdeye, M_inv = birdeye_view(binary)
 plt.imsave('binary_birdeye.png', binary_birdeye)
 
+binary_birdeye_2, M_inv_2 = birdeye_view(binary_threshold(img2))
+
 def detect_lane_lines(binary_birdeye):
     # Make histogram of bottom half of img
     histogram = np.sum(binary_birdeye[binary_birdeye.shape[0]//2:,:], axis=0)
@@ -94,8 +97,8 @@ def detect_lane_lines(binary_birdeye):
     left_base = np.argmax(histogram[:midpoint])
     right_base = np.argmax(histogram[midpoint:]) + midpoint
 
-    nwindows = 9
-    margin = 100
+    nwindows = 20
+    margin = 100 
     minpix = 50
 
     window_h = np.int32(binary_birdeye.shape[0]//nwindows)
@@ -123,24 +126,24 @@ def detect_lane_lines(binary_birdeye):
                           & (nonzerox >= win_left_low) & (nonzerox < win_left_high)).nonzero()[0]
         good_right_lane = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high)
                            & (nonzerox >= win_right_low) & (nonzerox < win_right_high)).nonzero()[0]
-        
-        left_lane.append(good_left_lane)
-        right_lane.append(good_right_lane)
 
-        # Recenter window if needed
-        if len(good_right_lane) > minpix:
-            left_curr = np.int32(np.mean(nonzerox[good_left_lane]))
-        if len(good_right_lane) > minpix:
-            right_curr = np.int32(np.mean(nonzerox[good_right_lane]))
+        # Add lane data and recenter windows if needed
+        if good_left_lane.size != 0:
+            left_lane.append(good_left_lane)
+            if len(good_right_lane) > minpix:
+                left_curr = np.int32(np.mean(nonzerox[good_left_lane]))
+        if good_right_lane.size != 0:
+            right_lane.append(good_right_lane)
+            if len(good_right_lane) > minpix:
+                right_curr = np.int32(np.mean(nonzerox[good_right_lane]))
 
-    # Not needed?
-    # try:
-    #     left_lane = np.concatenate(left_lane)
-    #     right_lane = np.concatenate(right_lane)
-    # except ValueError:
-    #     pass
+    try:
+        left_lane = np.concatenate(left_lane)
+        right_lane = np.concatenate(right_lane)
+    except ValueError:
+        pass
 
-    return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane]
+    return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane] # type: ignore
 
 def fit_poly(binary_birdeye, leftx, lefty, rightx, righty):
     left_fit = np.polyfit(lefty, leftx, 2)
@@ -158,9 +161,9 @@ def fit_poly(binary_birdeye, leftx, lefty, rightx, righty):
 
     return left_fit, right_fit, left_fitx, right_fitx, ploty
 
-def draw_poly_lines(binary_warped, left_fitx, right_fitx, ploty):     
+def draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty):     
     # Create an image to draw on and an image to show the selection window
-    out_img = np.dstack((binary_warped, binary_warped, binary_warped))*255
+    out_img = np.dstack((binary_birdeye, binary_birdeye, binary_birdeye))*255
     window_img = np.zeros_like(out_img)
         
     margin = 100
@@ -186,12 +189,42 @@ def draw_poly_lines(binary_warped, left_fitx, right_fitx, ploty):
     ## End visualization steps ##
     return result
     
-# leftx, lefty, rightx, righty = detect_lane_lines(binary_birdeye)
-# left_fit, right_fit, left_fitx, right_fitx, ploty = fit_poly(binary_birdeye,leftx, lefty, rightx, righty)
-# print(left_fit)
-# out_img = draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)
-# plt.imshow(out_img)
+# Test 4 - successful
+leftx, lefty, rightx, righty = detect_lane_lines(binary_birdeye)
+left_fit, right_fit, left_fitx, right_fitx, ploty = fit_poly(binary_birdeye, leftx, lefty, rightx, righty)
+out_img = draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)
+plt.imsave("birdeye_lines_detected.png", out_img)
+plt.imshow(out_img)
+plt.show()
 
-# plt.imshow(out_img, cmap='gray')
-# plt.show()
+prev_left_fit, prev_right_fit = left_fit, right_fit
+
+def find_lane_pixels_using_prev_poly(binary_birdeye):
+    # global prev_left_fit
+    # global prev_right_fit
+
+    # Possible margin to prev frame
+    margin = 100
+
+    # Retrieve activated pixels from prev frame
+    nonzero = binary_birdeye.nonzero()
+    nonzeroy = np.array(nonzero[0])
+    nonzerox = np.array(nonzero[1])
+
+    # Set search area based on prev frame
+    left_lane = ((nonzerox > (prev_left_fit[0]*(nonzeroy**2) + prev_left_fit[1]*nonzeroy + 
+                    prev_left_fit[2] - margin)) & (nonzerox < (prev_left_fit[0]*(nonzeroy**2) + 
+                    prev_left_fit[1]*nonzeroy + prev_left_fit[2] + margin))).nonzero()[0]
+    right_lane = ((nonzerox > (prev_right_fit[0]*(nonzeroy**2) + prev_right_fit[1]*nonzeroy + 
+                    prev_right_fit[2] - margin)) & (nonzerox < (prev_right_fit[0]*(nonzeroy**2) + 
+                    prev_right_fit[1]*nonzeroy + prev_right_fit[2] + margin))).nonzero()[0]
+    
+    # Retrieve new left and right lane positions
+    return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane]
+
+# Test 5
+leftx, lefty, rightx, righty = find_lane_pixels_using_prev_poly(binary_birdeye_2)
+left_fit, right_fit, left_fitx, right_fitx, ploty = fit_poly(binary_birdeye_2, leftx, lefty, rightx, righty)
+out_img = draw_poly_lines(binary_birdeye_2, left_fitx, right_fitx, ploty)
+plt.imsave("birdeye_lines_detected_2.png", out_img)
 # todo
