@@ -11,6 +11,9 @@ import os
 img = cv2.imread('.\\test_curve_1.png')
 img2 = cv2.imread('.\\test_curve_2.png')
 
+# img = cv2.imread('.\\test_img.png')
+# img2 = cv2.imread('.\\test_img.png')
+
 def birdeye_view(img):
     img_size = (img.shape[1], img.shape[0])
     offset = 300
@@ -18,10 +21,10 @@ def birdeye_view(img):
     # Source points taken from images with straight lane lines, these are to become parallel after the warp transform
     # Needs to be updated with accurate lane coordinates
     src = np.array([
-        (355, 555), # bottom-left corner
-        (625, 365), # top-left corner
-        (655, 365), # top-right corner
-        (875, 555) # bottom-right corner
+        (390, 545), # bottom-left corner
+        (619, 367), # top-left corner
+        (662, 367), # top-right corner
+        (883, 545) # bottom-right corner
     ], dtype='f')
     dst = np.array([
         [offset, img_size[1]],             # bottom-left corner
@@ -97,7 +100,7 @@ def detect_lane_lines(binary_birdeye):
     left_base = np.argmax(histogram[:midpoint])
     right_base = np.argmax(histogram[midpoint:]) + midpoint
 
-    nwindows = 20
+    nwindows = 15
     margin = 100 
     minpix = 50
 
@@ -141,7 +144,7 @@ def detect_lane_lines(binary_birdeye):
         left_lane = np.concatenate(left_lane)
         right_lane = np.concatenate(right_lane)
     except ValueError:
-        pass
+        exit("No lines detected!")
 
     return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane] # type: ignore
 
@@ -194,8 +197,8 @@ leftx, lefty, rightx, righty = detect_lane_lines(binary_birdeye)
 left_fit, right_fit, left_fitx, right_fitx, ploty = fit_poly(binary_birdeye, leftx, lefty, rightx, righty)
 out_img = draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)
 plt.imsave("birdeye_lines_detected.png", out_img)
-plt.imshow(out_img)
-plt.show()
+# plt.imshow(out_img)
+# plt.show()
 
 prev_left_fit, prev_right_fit = left_fit, right_fit
 
@@ -227,4 +230,24 @@ leftx, lefty, rightx, righty = find_lane_pixels_using_prev_poly(binary_birdeye_2
 left_fit, right_fit, left_fitx, right_fitx, ploty = fit_poly(binary_birdeye_2, leftx, lefty, rightx, righty)
 out_img = draw_poly_lines(binary_birdeye_2, left_fitx, right_fitx, ploty)
 plt.imsave("birdeye_lines_detected_2.png", out_img)
+
+def measure_curvature(left_fitx, right_fitx, ploty):
+    # Define meters per pixel
+    ym_ppx = 30/720
+    xm_ppx = 3.7/700
+
+    left_fit_cr = np.polyfit(ploty * ym_ppx, left_fitx * xm_ppx, 2)
+    right_fit_cr = np.polyfit(ploty * ym_ppx, right_fitx * xm_ppx, 2)
+
+    y_eval = np.max(ploty)
+
+    # Calculate curve radius
+    left_curverad = ((1 + (2*left_fit_cr[0]*y_eval*ym_ppx + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
+    right_curverad = ((1 + (2*right_fit_cr[0]*y_eval*ym_ppx + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
+
+    return left_curverad, right_curverad
+
+left_curve, right_curve = measure_curvature(left_fitx, right_fitx, ploty)
+print('Left curve: ' + str(left_curve) + '; Right curve: ' + str(right_curve))
+    
 # todo
