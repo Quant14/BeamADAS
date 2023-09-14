@@ -20,16 +20,18 @@ bng = BeamNGpy('localhost', 4771, home=home.readline())
 bng.open()
 
 # scenario = Scenario('italy', 'test')
-scenario = Scenario('garage_v2', 'test')
+scenario = Scenario('smallgrid', 'test')
 
-vehicle = Vehicle('ego_vehicle', model='etk800', license='TEST', color=(0.1, 0.5, 0.1, 1))
+vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.1, 0.5, 0.1, 1))
+box = Vehicle('box', model='metal_box')
 
 # scenario.add_vehicle(vehicle, pos=(1199, -830, 146), rot_quat=(-0.2810479, -0.0583663, -0.9556557, 0.0657856))
-scenario.add_vehicle(vehicle, pos=(-0.342, -0.044, 100.206), rot_quat=(0, 0, 0, 1))
+scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
+scenario.add_vehicle(box, pos=(0, -10, 0))
 scenario.make(bng)
 
 bng.scenario.load(scenario)
-bng.settings.set_deterministic(40)
+bng.settings.set_deterministic(30)
 bng.scenario.start()
 
 lidar = Lidar('lidar', 
@@ -38,8 +40,9 @@ lidar = Lidar('lidar',
               requested_update_time=0.03, 
               pos=(0, -2.3, 0.6), 
               dir=(-1, 0.15, 0), 
-              vertical_resolution=2, 
+              vertical_resolution=20, 
               vertical_angle=20, 
+              rays_per_second=6000,
               frequency=30, 
               horizontal_angle=30,
               max_distance=150,
@@ -64,23 +67,23 @@ time.sleep(5)
 #     plt.imsave('img' + str(i) + '.png', np.asarray(data['colour'].convert('RGB')))
 
 # input('Hit enter to take final frame')
-
+scenario.update()
 data = lidar.poll()['pointCloud']
+vehLoc = vehicle.state['pos']
 i = 0
 skip = False
 for a in data:
     if a == 0:
         break
     i += 1
-    if i % 6 == 0:
-        lidar_file.write(str(a) + '\n\n')
-        skip = True
-    elif i % 3 == 0:
+    if i % 3 == 0:
         if skip == False:
-            lidar_file.write(str(a) + '\n\n')
-        skip = False
+            lidar_file.write(str(a - vehLoc[(i - 1) % 3]) + '\n\n')
+            skip = True
+        else:
+            skip = False
     elif skip == False:
-        lidar_file.write(str(a) + '\n')
+        lidar_file.write(str(a - vehLoc[(i - 1) % 3]) + '\n')
 
 # data = camera.poll()
 # plt.imsave('img30.png', np.asarray(data['colour'].convert('RGB')))
