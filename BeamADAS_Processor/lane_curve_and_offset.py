@@ -60,35 +60,17 @@ def binary_threshold(img):
     white_binary = np.zeros_like(gray)
     white_binary[(gray > 200) & (gray <= 255)] = 1
 
-    # Convert to HLS
-    # hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
-    # H = hls[:,:,0]
-    # S = hls[:,:,2]
-
-    # # Detect high saturation
-    # sat_binary = np.zeros_like(S)
-    # sat_binary[(S > 50) & (S <= 255)] = 1
-
-    # # Detect yellow pixels
-    # hue_binary = np.zeros_like(H)
-    # hue_binary[(H > 15) & (H <= 25)] = 1
-
-    # Combine results
-    binary_1 = cv2.bitwise_or(sx_binary, white_binary)
-    # binary_2 = cv2.bitwise_or(hue_binary, sat_binary)
-    
-    # return cv2.bitwise_or(binary_1, binary_2)
-    return binary_1
+    return cv2.bitwise_or(sx_binary, white_binary)
 
 # Test 2 - successful
-binary = binary_threshold(img)
-out_img = np.dstack((binary, binary, binary))*255 # type: ignore
-plt.imsave('binary_img_no_yellow.png', out_img)
+# binary = binary_threshold(img)
+# out_img = np.dstack((binary, binary, binary))*255 # type: ignore
+# plt.imsave('binary_img_no_yellow.png', out_img)
 
 # Test 3 - successful
-binary_birdeye, M_inv = birdeye_view(binary)
-plt.imsave('binary_birdeye.png', binary_birdeye)
-binary_birdeye_2, M_inv_2 = birdeye_view(binary_threshold(img2))
+# binary_birdeye, M_inv = birdeye_view(binary)
+# plt.imsave('binary_birdeye.png', binary_birdeye)
+# binary_birdeye_2, M_inv_2 = birdeye_view(binary_threshold(img2))
 
 def detect_lane_lines(binary_birdeye):
     # Make histogram of bottom half of img
@@ -192,14 +174,14 @@ def draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty):
     return result
     
 # Test 4 - successful
-leftx, lefty, rightx, righty = detect_lane_lines(binary_birdeye)
-left_fit, right_fit, left_fitx, right_fitx, ploty = fit_poly(binary_birdeye, leftx, lefty, rightx, righty)
-out_img = draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)
-plt.imsave("birdeye_lines_detected.png", out_img)
+# leftx, lefty, rightx, righty = detect_lane_lines(binary_birdeye)
+# left_fit, right_fit, left_fitx, right_fitx, ploty = fit_poly(binary_birdeye, leftx, lefty, rightx, righty)
+# out_img = draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)
+# plt.imsave("birdeye_lines_detected.png", out_img)
 # plt.imshow(out_img)
 # plt.show()
 
-prev_left_fit, prev_right_fit = left_fit, right_fit
+# prev_left_fit, prev_right_fit = left_fit, right_fit
 
 def find_lane_pixels_using_prev_poly(binary_birdeye):
     global prev_left_fit
@@ -225,10 +207,10 @@ def find_lane_pixels_using_prev_poly(binary_birdeye):
     return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane]
 
 # Test 5 - successful
-leftx, lefty, rightx, righty = find_lane_pixels_using_prev_poly(binary_birdeye_2)
-left_fit, right_fit, left_fitx, right_fitx, ploty = fit_poly(binary_birdeye_2, leftx, lefty, rightx, righty)
-out_img = draw_poly_lines(binary_birdeye_2, left_fitx, right_fitx, ploty)
-plt.imsave("birdeye_lines_detected_2.png", out_img)
+# leftx, lefty, rightx, righty = find_lane_pixels_using_prev_poly(binary_birdeye_2)
+# left_fit, right_fit, left_fitx, right_fitx, ploty = fit_poly(binary_birdeye_2, leftx, lefty, rightx, righty)
+# out_img = draw_poly_lines(binary_birdeye_2, left_fitx, right_fitx, ploty)
+# plt.imsave("birdeye_lines_detected_2.png", out_img)
 
 def measure_curvature(left_fitx, right_fitx, ploty):
     # Define meters per pixel
