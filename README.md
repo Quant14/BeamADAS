@@ -14,6 +14,8 @@ This is a project, aimed at developing a realistic ADAS system using BeamNG.tech
 The host uses BeamNGpy to get live sensor data from BeamNG.tech and send it to the processor (separate microcomputer, connected to the host via USB). The processor calculates the adjustments that need to be made to the inputs of the vehicle and sends them back to the host. The host can then apply those changes to the vehicle inputs inside the simulation. 
 
 ## Progress log
+#### 18-22nd Sep 2023
+Ultrasonic sensor setup and visualization: https://clipchamp.com/watch/7sZU0Cyv0Wi
 #### 11-15th Sep 2023
 Successful semi-working road curvature detection.
 LiDAR data output analysis.
