@@ -25,7 +25,7 @@ scenario = Scenario('italy', 'test')
 vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.1, 0.5, 0.1, 1))
 # box = Vehicle('box', model='metal_box')
 
-scenario.add_vehicle(vehicle, pos=(1199, -830, 146), rot_quat=(-0.2810479, -0.0583663, -0.9556557, 0.0657856))
+scenario.add_vehicle(vehicle, pos=(1205, -824, 146), rot_quat=(-0.278, -0.025, -0.953, 0.302))
 # scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
 # scenario.add_vehicle(box, pos=(0, -5, 0))
 scenario.make(bng)
@@ -155,6 +155,10 @@ data = lidar.poll()['pointCloud']
 vehLoc = vehicle.state['pos']
 i = 0
 # skip = False
+
+vehicle.ai_set_speed(22, 'limit')
+vehicle.ai_drive_in_lane(True)
+vehicle.ai_set_mode('span')
 
 input('Hit enter to exit')
 
