@@ -23,11 +23,11 @@ scenario = Scenario('italy', 'test')
 # scenario = Scenario('smallgrid', 'test')
 
 vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.1, 0.5, 0.1, 1))
-box = Vehicle('box', model='metal_box')
+# box = Vehicle('box', model='metal_box')
 
 scenario.add_vehicle(vehicle, pos=(1199, -830, 146), rot_quat=(-0.2810479, -0.0583663, -0.9556557, 0.0657856))
 # scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
-scenario.add_vehicle(box, pos=(0, -5, 0))
+# scenario.add_vehicle(box, pos=(0, -5, 0))
 scenario.make(bng)
 
 bng.scenario.load(scenario)
@@ -87,11 +87,11 @@ uss_r = Ultrasonic('uss_r',
                 requested_update_time=0.3, 
                 pos=(0, 2.4, 0.4), 
                 dir=(0, 1, 0), 
-                field_of_view_y=60, 
+                field_of_view_y=45, 
                 near_far_planes=(0.1, 3.0), 
                 range_min_cutoff=0.1, 
                 range_direct_max_cutoff=3.0,
-                sensitivity=0.001, 
+                sensitivity=0.005, 
                 is_visualised=True)
 uss_rl = Ultrasonic('uss_rl', 
                 bng, 
@@ -154,7 +154,7 @@ scenario.update()
 data = lidar.poll()['pointCloud']
 vehLoc = vehicle.state['pos']
 i = 0
-skip = False
+# skip = False
 
 input('Hit enter to exit')
 
@@ -169,10 +169,12 @@ for a in data:
         # else:
         #     skip = False
         lidar_file.write(str(Decimal(a - vehLoc[(i - 1) % 3]).quantize(Decimal('0.001'), ROUND_HALF_UP)) + '\n')
-    elif skip == False:
+    else:
         lidar_file.write(str(Decimal(a - vehLoc[(i - 1) % 3]).quantize(Decimal('0.001'), ROUND_HALF_UP)) + ', ')
-# data = camera.poll()
-# plt.imsave('img30.png', np.asarray(data['colour'].convert('RGB')))
+
+data = camera.poll()['colour']
+plt.imsave('img.png', np.asarray(data.convert('L')), cmap='gray')
+# plt.imsave('img.png', np.asarray(data['colour'].convert('RGB')))
 
 lidar_file.close()
 lidar.remove()
