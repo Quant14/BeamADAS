@@ -45,10 +45,8 @@ def birdeye_view(img):
 # plt.imsave('birdeye_img.png', birdeye_img)
 
 def binary_threshold(img):
-    # Transform to gray scale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # Apply sobel in x direction (detect vertical lines)
-    sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0) # type: ignore
+    sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0) # type: ignore
     abs_sobelx = np.absolute(sobelx)
 
     scaled_sobel = np.uint8(255 * abs_sobelx / np.max(abs_sobelx))
@@ -57,8 +55,8 @@ def binary_threshold(img):
     sx_binary[(scaled_sobel >= 200) & (scaled_sobel <= 255)] = 1
 
     # Detect white pixels
-    white_binary = np.zeros_like(gray)
-    white_binary[(gray > 200) & (gray <= 255)] = 1
+    white_binary = np.zeros_like(img)
+    white_binary[(img > 200) & (img <= 255)] = 1
 
     return cv2.bitwise_or(sx_binary, white_binary)
 
