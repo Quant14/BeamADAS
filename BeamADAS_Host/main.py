@@ -7,7 +7,7 @@ import numpy as np
 from decimal import Decimal, ROUND_HALF_UP
 
 from beamngpy import BeamNGpy, Scenario, Vehicle
-from beamngpy.sensors import Lidar, Camera, Ultrasonic
+from beamngpy.sensors import Camera, Lidar, Ultrasonic, Electrics, State
 
 # Open BeamNG.tech home directory
 home = open(os.path.join(os.getcwd(), "bngtechdir.txt"), "r")
@@ -56,7 +56,7 @@ uss_f = Ultrasonic('uss_f',
                 range_min_cutoff=0.1, 
                 range_direct_max_cutoff=3.0,
                 sensitivity=0.005, 
-                is_visualised=True)
+                is_visualised=False)
 uss_fl = Ultrasonic('uss_fl', 
                 bng, 
                 vehicle, 
@@ -68,7 +68,7 @@ uss_fl = Ultrasonic('uss_fl',
                 range_min_cutoff=0.1, 
                 range_direct_max_cutoff=3.0,
                 sensitivity=0.005, 
-                is_visualised=True)
+                is_visualised=False)
 uss_fr = Ultrasonic('uss_fr', 
                 bng, 
                 vehicle, 
@@ -80,7 +80,7 @@ uss_fr = Ultrasonic('uss_fr',
                 range_min_cutoff=0.1, 
                 range_direct_max_cutoff=3.0,
                 sensitivity=0.005, 
-                is_visualised=True)
+                is_visualised=False)
 uss_r = Ultrasonic('uss_r', 
                 bng, 
                 vehicle, 
@@ -92,7 +92,7 @@ uss_r = Ultrasonic('uss_r',
                 range_min_cutoff=0.1, 
                 range_direct_max_cutoff=3.0,
                 sensitivity=0.005, 
-                is_visualised=True)
+                is_visualised=False)
 uss_rl = Ultrasonic('uss_rl', 
                 bng, 
                 vehicle, 
@@ -104,7 +104,7 @@ uss_rl = Ultrasonic('uss_rl',
                 range_min_cutoff=0.1, 
                 range_direct_max_cutoff=3.0,
                 sensitivity=0.005, 
-                is_visualised=True)
+                is_visualised=False)
 uss_rr = Ultrasonic('uss_rr', 
                 bng, 
                 vehicle, 
@@ -116,7 +116,7 @@ uss_rr = Ultrasonic('uss_rr',
                 range_min_cutoff=0.1, 
                 range_direct_max_cutoff=3.0,
                 sensitivity=0.005, 
-                is_visualised=True)
+                is_visualised=False)
 lidar = Lidar('lidar', 
               bng, 
               vehicle, 
@@ -143,6 +143,15 @@ lidar = Lidar('lidar',
 #               horizontal_angle=30,
 #               max_distance=150,
 #               is_visualised=True)
+# state = State()
+# vehicle.attach_sensor('state', state)
+# state.attach(vehicle, 'state')
+# state.connect(bng, vehicle)
+electrics = Electrics()
+vehicle.attach_sensor('electrics', electrics)
+electrics.attach(vehicle, 'electrics')
+electrics.connect(bng, vehicle)
+
 time.sleep(5)
 
 # input('Hit enter to start camera')
@@ -150,17 +159,31 @@ time.sleep(5)
 #     data = camera.poll()
 #     plt.imsave('img' + str(i) + '.png', np.asarray(data['colour'].convert('RGB')))
 
+# vehicle.ai_set_speed(22, 'limit')
+# vehicle.ai_drive_in_lane(True)
+# vehicle.ai_set_mode('span')
+
+time.sleep(15)
+
+# --- Emergency brake
+vehicle.sensors.poll('state', 'electrics')
+brake = electrics.data['brake_input']
+
+while abs(vehicle.state['vel'][0]) >= 0.02 or abs(vehicle.state['vel'][1]) >= 0.02 or abs(vehicle.state['vel'][2]) >= 0.02:
+    vehicle.control(throttle=0)
+    vehicle.control(brake=1)
+    vehicle.sensors.poll('state')
+
+vehicle.control(gear=0)
+vehicle.control(brake=brake)
+vehicle.control(parkingbrake=1.0)
+input('Hit enter to exit')
+
 scenario.update()
 data = lidar.poll()['pointCloud']
 vehLoc = vehicle.state['pos']
 i = 0
 # skip = False
-
-vehicle.ai_set_speed(22, 'limit')
-vehicle.ai_drive_in_lane(True)
-vehicle.ai_set_mode('span')
-
-input('Hit enter to exit')
 
 for a in data:
     if a == 0:
