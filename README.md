@@ -16,6 +16,10 @@ The host uses BeamNGpy to get live sensor data from BeamNG.tech and send it to t
 ## Progress log
 #### 18-22nd Sep 2023
 Ultrasonic sensor setup and visualization: https://clipchamp.com/watch/7sZU0Cyv0Wi
+
+Improved sensor settings.
+Added AI control and testing.
+Added emergency braking test.
 #### 11-15th Sep 2023
 Successful semi-working road curvature detection.
 LiDAR data output analysis.
