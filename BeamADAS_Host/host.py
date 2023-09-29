@@ -1,6 +1,7 @@
 # This file includes the host init and destroy code for a cleaner main file
 
 import os
+# import pyserial
 
 from beamngpy import BeamNGpy, Scenario, Vehicle
 from beamngpy.sensors import Camera, Lidar, Ultrasonic, Electrics, Timer
@@ -16,16 +17,16 @@ def init():
     bng.open()
 
     # Set map
-    scenario = Scenario('italy', 'test')
-    # scenario = Scenario('smallgrid', 'test')
+    # scenario = Scenario('italy', 'test')
+    scenario = Scenario('smallgrid', 'test')
 
     # Create vehicles
     vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.3, 0.8, 0.3, 1))
     # box = Vehicle('box', model='metal_box')
 
     # Add vehicles to scenario
-    scenario.add_vehicle(vehicle, pos=(1205, -824, 146), rot_quat=(-0.278, -0.025, -0.953, 0.302))
-    # scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
+    # scenario.add_vehicle(vehicle, pos=(1205, -824, 146), rot_quat=(-0.278, -0.025, -0.953, 0.302))
+    scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
     # scenario.add_vehicle(box, pos=(0, -5, 0))
     
     # Load scenario
@@ -34,6 +35,7 @@ def init():
 
     # Start BeamNG
     bng.settings.set_deterministic(30)
+    bng.settings.set_steps_per_second(30)
     bng.scenario.start()
 
     # Init sensors
@@ -48,7 +50,8 @@ def init():
             near_far_planes=(0.05, 200), 
             is_render_colours=True, 
             is_render_annotations=False, 
-            is_render_depth=False)
+            is_render_depth=False,
+            is_using_shared_memory=True)
     lidar = Lidar('lidar', 
                 bng, 
                 vehicle, 
@@ -171,6 +174,10 @@ def init():
     timer.connect(bng, vehicle)
 
     return home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer
+
+def is_elapsed(timer, vehicle, timestamp):
+    vehicle.sensors.poll('timer')
+    return timer.data['time'] - timestamp >= 0.06
 
 def destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer):
     camera.remove()

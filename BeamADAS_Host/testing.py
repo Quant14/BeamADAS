@@ -35,18 +35,6 @@ bng.scenario.load(scenario)
 bng.settings.set_deterministic(30)
 bng.scenario.start()
 
-camera = Camera('camera', 
-                bng, 
-                vehicle, 
-                requested_update_time=0.06,
-                update_priority=1,
-                pos=(0, -0.35, 1.3), 
-                resolution=(1280, 720), 
-                field_of_view_y=60, 
-                near_far_planes=(0.05, 200), 
-                is_render_colours=True, 
-                is_render_annotations=False, 
-                is_render_depth=False)
 lidar = Lidar('lidar', 
               bng, 
               vehicle, 
@@ -144,33 +132,46 @@ vehicle.attach_sensor('timer', timer)
 timer.attach(vehicle, 'timer')
 timer.connect(bng, vehicle)
 
-# input('Hit enter to start camera')
-# for i in range(0, 30, 1):
-#     data = camera.poll()
-#     plt.imsave('img' + str(i) + '.png', np.asarray(data['colour'].convert('RGB')))
+camera = Camera('camera', 
+                bng, 
+                vehicle, 
+                requested_update_time=0.06,
+                update_priority=1,
+                pos=(0, -0.35, 1.3), 
+                resolution=(1280, 720), 
+                field_of_view_y=60, 
+                near_far_planes=(0.05, 200), 
+                is_render_colours=True, 
+                is_render_annotations=False, 
+                is_render_depth=False)
+
+input('Hit enter to start camera')
+time.sleep(5)
+for i in range(0, 30, 1):
+    plt.imsave('img' + str(i) + '.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
 
 # vehicle.ai_set_speed(22, 'limit')
 # vehicle.ai_drive_in_lane(True)
 # vehicle.ai_set_mode('span')
 
-time.sleep(15)
+# time.sleep(15)
 
-# --- Emergency brake ---
-vehicle.sensors.poll('electrics')
-brake = electrics.data['brake_input']
+# # --- Emergency brake ---
+# vehicle.sensors.poll('electrics')
+# brake = electrics.data['brake_input']
 
-while abs(electrics.data['wheelspeed']) >= 0.05:
-    vehicle.control(throttle=0)
-    vehicle.control(brake=1)
-    vehicle.sensors.poll('electrics')
+# while abs(electrics.data['wheelspeed']) >= 0.05:
+#     vehicle.control(throttle=0)
+#     vehicle.control(brake=1)
+#     vehicle.sensors.poll('electrics')
 
-vehicle.control(brake=brake)
-vehicle.control(parkingbrake=1.0)
-# -----------------------
+# vehicle.control(brake=brake)
+# vehicle.control(parkingbrake=1.0)
+# # -----------------------
 
-plt.imsave('img.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
+# plt.imsave('img.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
 
-input('Hit enter to exit')
+# input('Hit enter to exit')
 
 # vehicle.sensors.poll('state')
 # data = lidar.poll()['pointCloud']
