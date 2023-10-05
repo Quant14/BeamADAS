@@ -14,6 +14,15 @@ This is a project, aimed at developing a realistic ADAS system using BeamNG.tech
 The host uses BeamNGpy to get live sensor data from BeamNG.tech and send it to the processor (separate microcomputer, connected to the host via USB). The processor calculates the adjustments that need to be made to the inputs of the vehicle and sends them back to the host. The host can then apply those changes to the vehicle inputs inside the simulation. 
 
 ## Progress log
+#### 2-6th Oct 2023
+Adjustment of project requirements based on new information about the issues found the previous week.
+Raspberry Pi initial setup.
+Research into Lua and preventing interference between the driver's inputs and the ADAS' inputs.
+Start upgrade from v0.29.1 to v0.30.5
+#### 25-29th Sep 2023
+Further specification of project requirements.
+Identified issues related to sensors latency and LiDAR data analysis. 
+Communication with the BeamNG.tech team related to mentioned issues.
 #### 18-22nd Sep 2023
 Ultrasonic sensor setup and visualization: https://clipchamp.com/watch/7sZU0Cyv0Wi
 
