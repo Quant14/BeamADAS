@@ -20,14 +20,14 @@ bng = BeamNGpy('localhost', 4771, home=home.readline())
 
 bng.open()
 
-scenario = Scenario('italy', 'test')
-# scenario = Scenario('smallgrid', 'test')
+# scenario = Scenario('italy', 'test')
+scenario = Scenario('smallgrid', 'test')
 
 vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.1, 0.5, 0.1, 1))
 # box = Vehicle('box', model='metal_box')
 
-scenario.add_vehicle(vehicle, pos=(1205, -824, 146), rot_quat=(-0.278, -0.025, -0.953, 0.302))
-# scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
+# scenario.add_vehicle(vehicle, pos=(1205, -824, 146), rot_quat=(-0.278, -0.025, -0.953, 0.302))
+scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
 # scenario.add_vehicle(box, pos=(0, -5, 0))
 scenario.make(bng)
 
@@ -35,6 +35,18 @@ bng.scenario.load(scenario)
 bng.settings.set_deterministic(30)
 bng.scenario.start()
 
+camera = Camera('camera', 
+                bng, 
+                vehicle, 
+                requested_update_time=0.06,
+                update_priority=1,
+                pos=(0, -0.35, 1.3), 
+                resolution=(1280, 720), 
+                field_of_view_y=60, 
+                near_far_planes=(0.05, 200), 
+                is_render_colours=True, 
+                is_render_annotations=False, 
+                is_render_depth=False)
 lidar = Lidar('lidar', 
               bng, 
               vehicle, 
@@ -132,23 +144,10 @@ vehicle.attach_sensor('timer', timer)
 timer.attach(vehicle, 'timer')
 timer.connect(bng, vehicle)
 
-camera = Camera('camera', 
-                bng, 
-                vehicle, 
-                requested_update_time=0.06,
-                update_priority=1,
-                pos=(0, -0.35, 1.3), 
-                resolution=(1280, 720), 
-                field_of_view_y=60, 
-                near_far_planes=(0.05, 200), 
-                is_render_colours=True, 
-                is_render_annotations=False, 
-                is_render_depth=False)
-
-input('Hit enter to start camera')
-time.sleep(5)
-for i in range(0, 30, 1):
-    plt.imsave('img' + str(i) + '.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
+# input('Hit enter to start camera')
+# time.sleep(5)
+# for i in range(0, 30, 1):
+#     plt.imsave('img' + str(i) + '.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
 
 # vehicle.ai_set_speed(22, 'limit')
 # vehicle.ai_drive_in_lane(True)
@@ -171,7 +170,7 @@ for i in range(0, 30, 1):
 
 # plt.imsave('img.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
 
-# input('Hit enter to exit')
+input('Hit enter to exit')
 
 # vehicle.sensors.poll('state')
 # data = lidar.poll()['pointCloud']

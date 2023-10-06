@@ -21,7 +21,7 @@ def init():
     scenario = Scenario('smallgrid', 'test')
 
     # Create vehicles
-    vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.3, 0.8, 0.3, 1))
+    vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.1, 0.4, 0.1, 1))
     # box = Vehicle('box', model='metal_box')
 
     # Add vehicles to scenario
@@ -35,7 +35,6 @@ def init():
 
     # Start BeamNG
     bng.settings.set_deterministic(30)
-    bng.settings.set_steps_per_second(30)
     bng.scenario.start()
 
     # Init sensors
@@ -51,6 +50,7 @@ def init():
             is_render_colours=True, 
             is_render_annotations=False, 
             is_render_depth=False,
+            is_streaming=True,
             is_using_shared_memory=True)
     lidar = Lidar('lidar', 
                 bng, 
@@ -65,7 +65,8 @@ def init():
                 frequency=30, 
                 horizontal_angle=30,
                 max_distance=150,
-                is_visualised=False)
+                is_visualised=False,
+                is_streaming=True)
     uss_f = Ultrasonic('uss_f', 
                     bng, 
                     vehicle, 
@@ -77,7 +78,8 @@ def init():
                     range_min_cutoff=0.1, 
                     range_direct_max_cutoff=8.0,
                     sensitivity=0.005, 
-                    is_visualised=False)
+                    is_visualised=False,
+                    is_streaming=True)
     uss_fl = Ultrasonic('uss_fl', 
                     bng, 
                     vehicle, 
@@ -89,7 +91,8 @@ def init():
                     range_min_cutoff=0.1, 
                     range_direct_max_cutoff=3.0,
                     sensitivity=0.005, 
-                    is_visualised=False)
+                    is_visualised=False,
+                    is_streaming=True)
     uss_fr = Ultrasonic('uss_fr', 
                     bng, 
                     vehicle, 
@@ -101,7 +104,8 @@ def init():
                     range_min_cutoff=0.1, 
                     range_direct_max_cutoff=3.0,
                     sensitivity=0.005, 
-                    is_visualised=False)
+                    is_visualised=False,
+                    is_streaming=True)
     uss_r = Ultrasonic('uss_r', 
                     bng, 
                     vehicle, 
@@ -113,7 +117,8 @@ def init():
                     range_min_cutoff=0.1, 
                     range_direct_max_cutoff=3.0,
                     sensitivity=0.005, 
-                    is_visualised=False)
+                    is_visualised=False,
+                    is_streaming=True)
     uss_rl = Ultrasonic('uss_rl', 
                     bng, 
                     vehicle, 
@@ -125,7 +130,8 @@ def init():
                     range_min_cutoff=0.1, 
                     range_direct_max_cutoff=3.0,
                     sensitivity=0.005, 
-                    is_visualised=False)
+                    is_visualised=False,
+                    is_streaming=True)
     uss_rr = Ultrasonic('uss_rr', 
                     bng, 
                     vehicle, 
@@ -137,7 +143,8 @@ def init():
                     range_min_cutoff=0.1, 
                     range_direct_max_cutoff=3.0,
                     sensitivity=0.005, 
-                    is_visualised=False)
+                    is_visualised=False,
+                    is_streaming=True)
     uss_left = Ultrasonic('uss_left',
                     bng,
                     vehicle,
@@ -149,7 +156,8 @@ def init():
                     range_min_cutoff=0.1, 
                     range_direct_max_cutoff=3.0,
                     sensitivity=0.01, 
-                    is_visualised=False)
+                    is_visualised=False,
+                    is_streaming=True)
     uss_right = Ultrasonic('uss_right',
                     bng,
                     vehicle,
@@ -161,7 +169,8 @@ def init():
                     range_min_cutoff=0.1, 
                     range_direct_max_cutoff=3.0,
                     sensitivity=0.01, 
-                    is_visualised=False)
+                    is_visualised=False,
+                    is_streaming=True)
 
     electrics = Electrics()
     vehicle.attach_sensor('electrics', electrics)
