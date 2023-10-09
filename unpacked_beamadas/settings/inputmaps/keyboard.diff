@@ -1,7 +1,7 @@
 {
   "bindings":[
-    {"control":"down", "action":"brake", "filterType":3},
-    {"control":"up", "action":"accelerate", "filterType":4},
+    {"control":"down", "action":"brake", "filterType":22},
+    {"control":"up", "action":"accelerate", "filterType":22},
   ], 
   "removed": [
     {"control":"down", "action":"brake"},
