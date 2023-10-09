@@ -39,23 +39,23 @@ while(electrics.data['running']):
 
     # Blind spot detection
     # Timing benchmarks
-    print(time.time())
-    blind_data = [uss_left.stream(), uss_right.stream()]
-    print(time.time())
-    lidar.stream()
-    print(time.time())
-    camera_data = camera.stream_colour(3686400)
-    print(time.time())
-    camera_data = np.array(camera_data).reshape(height, width, 4)
-    camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
-    # Image.fromarray(camera_data, 'L').save("sh_mem.png", "PNG") # Replace with send over serial port
-    print(time.time())
-    break
+    # print(time.time())
+    # blind_data = [uss_left.stream(), uss_right.stream()]
+    # print(time.time())
+    # lidar.stream()
+    # print(time.time())
+    # camera_data = camera.stream_colour(3686400)
+    # print(time.time())
+    # camera_data = np.array(camera_data).reshape(height, width, 4)
+    # camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+    # # Image.fromarray(camera_data, 'L').save("sh_mem.png", "PNG") # Replace with send over serial port
+    # print(time.time())
+    # break
     # print('1: ' + str(time.time()))
     # vehicle.sensors.poll('timer')
     vehicle.sensors.poll('timer')
-    print(timer.data['time'])
-
+    # print(timer.data['time'])
+    # vehicle.control(throttle=0.75)
     # Update misc data
     vehicle.sensors.poll('electrics')
     speed = electrics.data['wheelspeed']

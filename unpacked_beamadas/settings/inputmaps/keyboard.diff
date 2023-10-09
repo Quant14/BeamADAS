@@ -1,0 +1,10 @@
+{
+  "bindings":[
+    {"control":"down", "action":"brake", "filterType":3},
+    {"control":"up", "action":"accelerate", "filterType":4},
+  ], 
+  "removed": [
+    {"control":"down", "action":"brake"},
+    {"control":"up", "action":"accelerate},
+  ]
+}
