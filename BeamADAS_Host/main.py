@@ -9,7 +9,7 @@ from PIL import Image
 width = 1280
 height = 720
 
-adas_state = 0 # States - 0 = off, 1 = on, 2 = ready, 3 = active
+adas_state = 0 # states: 0 = off, 1 = on, 2 = ready, 3 = active
 
 # Initialize simulation
 home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init()
@@ -60,6 +60,6 @@ while(electrics.data['running']):
 
     # Act on the simulation
     second += 1
-    vehicle.control(throttle=(second % 100) / 100)
+    vehicle.control(throttle=(second % 100) / 200)
 # Free resources
 host.destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer)
