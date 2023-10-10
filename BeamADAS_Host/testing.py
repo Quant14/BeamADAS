@@ -168,6 +168,20 @@ timer.connect(bng, vehicle)
 # vehicle.control(parkingbrake=1.0)
 # # -----------------------
 
+#  ----------- Timing benchmarks ---------------
+    # print(time.time())
+    # blind_data = [uss_left.stream(), uss_right.stream()]
+    # print(time.time())
+    # lidar.stream()
+    # print(time.time())
+    # camera_data = camera.stream_colour(3686400)
+    # print(time.time())
+    # camera_data = np.array(camera_data).reshape(height, width, 4)
+    # camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+    # # Image.fromarray(camera_data, 'L').save("sh_mem.png", "PNG") # Replace with send over serial port
+    # print(time.time())
+# -----------------------------------------------
+
 # plt.imsave('img.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
 
 input('Hit enter to exit')
