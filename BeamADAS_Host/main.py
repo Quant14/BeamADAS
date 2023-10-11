@@ -5,14 +5,19 @@ import host
 import time
 import matplotlib.pyplot as plt
 import numpy as np
+
 from PIL import Image
 width = 1280
 height = 720
+
+import serial
+import struct
 
 adas_state = 0 # states: 0 = off, 1 = on, 2 = ready, 3 = active
 
 # Initialize simulation
 home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init()
+ser = serial.Serial('COM5', baudrate=115200)
 adas_state = 1
 
 vehicle.sensors.poll('electrics', 'timer', 'state')
@@ -27,19 +32,21 @@ while(electrics.data['running']):
     # Update misc data
     vehicle.sensors.poll('electrics', 'timer', 'state')
     speed = electrics.data['wheelspeed']
-    
-    # Get ADAS sensors data
 
+    # Get ADAS sensors data
     if speed >= 8.333: # Speed for LiDAR
         lidar_data_readonly = lidar.stream()
         lidar_data = lidar_data_readonly.copy()
-        pos = vehicle.state['pos']
+        pos = lidar_data_readonly.state['pos']
 
-        # Not needed as serial port would transfer the same number of bytes
-        # for i in range(0, len(lidar_data)):
-        #     if lidar_data[i] == 0:
-        #         break
-        #     lidar_data[i] = round(lidar_data[i] - pos[i % 3], 3)
+        for i in range(0, len(lidar_data)):
+            if lidar_data[i] == 0:
+                break
+            lidar_data[i] = lidar_data[i] - pos[i % 3]
+        size = struct.pack('1i', *len(lidar_data))
+        ser.write(size)
+        lidar_data = struct.pack(str(len(lidar_data)) + 'f', *lidar_data)
+        ser.write(lidar_data)
 
         if speed >= 11.111 and second % 3 == 0: # Speed for camera
             camera_data = camera.stream_colour(3686400)
@@ -62,4 +69,5 @@ while(electrics.data['running']):
     second += 1
     vehicle.control(throttle=(second % 100) / 200)
 # Free resources
+ser.close()
 host.destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer)

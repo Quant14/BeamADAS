@@ -6,6 +6,9 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 from decimal import Decimal, ROUND_HALF_UP
+from PIL import Image
+width = 1280
+height = 720
 
 from beamngpy import BeamNGpy, Scenario, Vehicle
 from beamngpy.sensors import Camera, Lidar, Ultrasonic, Electrics, Timer
@@ -20,14 +23,14 @@ bng = BeamNGpy('localhost', 4771, home=home.readline())
 
 bng.open()
 
-# scenario = Scenario('italy', 'test')
-scenario = Scenario('smallgrid', 'test')
+scenario = Scenario('italy', 'test')
+# scenario = Scenario('smallgrid', 'test')
 
 vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.1, 0.5, 0.1, 1))
 # box = Vehicle('box', model='metal_box')
 
-# scenario.add_vehicle(vehicle, pos=(1205, -824, 146), rot_quat=(-0.278, -0.025, -0.953, 0.302))
-scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
+scenario.add_vehicle(vehicle, pos=(1205, -824, 146), rot_quat=(-0.278, -0.025, -0.953, 0.302))
+# scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
 # scenario.add_vehicle(box, pos=(0, -5, 0))
 scenario.make(bng)
 
@@ -36,31 +39,34 @@ bng.settings.set_deterministic(30)
 bng.scenario.start()
 
 camera = Camera('camera', 
-                bng, 
-                vehicle, 
-                requested_update_time=0.06,
-                update_priority=1,
-                pos=(0, -0.35, 1.3), 
-                resolution=(1280, 720), 
-                field_of_view_y=60, 
-                near_far_planes=(0.05, 200), 
-                is_render_colours=True, 
-                is_render_annotations=False, 
-                is_render_depth=False)
+            bng, 
+            vehicle, 
+            requested_update_time=0.06,
+            update_priority=1,
+            pos=(0, -0.35, 1.3), 
+            resolution=(1280, 720), 
+            field_of_view_y=60, 
+            near_far_planes=(0.05, 200), 
+            is_render_colours=True, 
+            is_render_annotations=False, 
+            is_render_depth=False,
+            is_streaming=True,
+            is_using_shared_memory=True)
 lidar = Lidar('lidar', 
-              bng, 
-              vehicle, 
-              requested_update_time=0.03,
-              update_priority=1,
-              pos=(0, -2.25, 0.60), 
-              dir=(-1, 0.1, 0), 
-              vertical_resolution=60, 
-              vertical_angle=20, 
-              rays_per_second=172800,
-              frequency=30, 
-              horizontal_angle=30,
-              max_distance=150,
-              is_visualised=True)
+            bng, 
+            vehicle, 
+            requested_update_time=0.03,
+            update_priority=1,
+            pos=(0, -2.25, 0.60), 
+            dir=(-1, 0.1, 0), 
+            vertical_resolution=60, 
+            vertical_angle=20, 
+            rays_per_second=172800,
+            frequency=30, 
+            horizontal_angle=30,
+            max_distance=150,
+            is_visualised=False,
+            is_streaming=True)
 uss_f = Ultrasonic('uss_f', 
                 bng, 
                 vehicle, 
@@ -72,7 +78,8 @@ uss_f = Ultrasonic('uss_f',
                 range_min_cutoff=0.1, 
                 range_direct_max_cutoff=8.0,
                 sensitivity=0.005, 
-                is_visualised=False)
+                is_visualised=False,
+                is_streaming=True)
 uss_fl = Ultrasonic('uss_fl', 
                 bng, 
                 vehicle, 
@@ -84,7 +91,8 @@ uss_fl = Ultrasonic('uss_fl',
                 range_min_cutoff=0.1, 
                 range_direct_max_cutoff=3.0,
                 sensitivity=0.005, 
-                is_visualised=False)
+                is_visualised=False,
+                is_streaming=True)
 uss_fr = Ultrasonic('uss_fr', 
                 bng, 
                 vehicle, 
@@ -96,7 +104,8 @@ uss_fr = Ultrasonic('uss_fr',
                 range_min_cutoff=0.1, 
                 range_direct_max_cutoff=3.0,
                 sensitivity=0.005, 
-                is_visualised=False)
+                is_visualised=False,
+                is_streaming=True)
 uss_r = Ultrasonic('uss_r', 
                 bng, 
                 vehicle, 
@@ -108,7 +117,8 @@ uss_r = Ultrasonic('uss_r',
                 range_min_cutoff=0.1, 
                 range_direct_max_cutoff=3.0,
                 sensitivity=0.005, 
-                is_visualised=False)
+                is_visualised=False,
+                is_streaming=True)
 uss_rl = Ultrasonic('uss_rl', 
                 bng, 
                 vehicle, 
@@ -120,7 +130,8 @@ uss_rl = Ultrasonic('uss_rl',
                 range_min_cutoff=0.1, 
                 range_direct_max_cutoff=3.0,
                 sensitivity=0.005, 
-                is_visualised=False)
+                is_visualised=False,
+                is_streaming=True)
 uss_rr = Ultrasonic('uss_rr', 
                 bng, 
                 vehicle, 
@@ -132,7 +143,34 @@ uss_rr = Ultrasonic('uss_rr',
                 range_min_cutoff=0.1, 
                 range_direct_max_cutoff=3.0,
                 sensitivity=0.005, 
-                is_visualised=False)
+                is_visualised=False,
+                is_streaming=True)
+uss_left = Ultrasonic('uss_left',
+                bng,
+                vehicle,
+                requested_update_time=0.06,
+                pos=(0.95, -0.4, 0.95),
+                dir=(0.6, 0.4, 0),
+                field_of_view_y=60,
+                near_far_planes=(0.1, 3.0), 
+                range_min_cutoff=0.1, 
+                range_direct_max_cutoff=3.0,
+                sensitivity=0.01, 
+                is_visualised=False,
+                is_streaming=True)
+uss_right = Ultrasonic('uss_right',
+                bng,
+                vehicle,
+                requested_update_time=0.06,
+                pos=(-0.95, -0.4, 0.95),
+                dir=(-0.6, 0.4, 0),
+                field_of_view_y=60,
+                near_far_planes=(0.1, 3.0), 
+                range_min_cutoff=0.1, 
+                range_direct_max_cutoff=3.0,
+                sensitivity=0.01, 
+                is_visualised=False,
+                is_streaming=True)
 
 electrics = Electrics()
 vehicle.attach_sensor('electrics', electrics)
@@ -144,10 +182,14 @@ vehicle.attach_sensor('timer', timer)
 timer.attach(vehicle, 'timer')
 timer.connect(bng, vehicle)
 
-# input('Hit enter to start camera')
-# time.sleep(5)
-# for i in range(0, 30, 1):
-#     plt.imsave('img' + str(i) + '.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
+input('Hit enter to start camera')
+time.sleep(5)
+for i in range(0, 30, 1):
+    # plt.imsave('img' + str(i) + '.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
+    camera_data = camera.stream_colour(3686400)
+    camera_data = np.array(camera_data).reshape(height, width, 4)
+    camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+    Image.fromarray(camera_data, 'L').save('img' + str(i) + '.png', "PNG")
 
 # vehicle.ai_set_speed(22, 'limit')
 # vehicle.ai_drive_in_lane(True)
@@ -184,7 +226,7 @@ timer.connect(bng, vehicle)
 
 # plt.imsave('img.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
 
-input('Hit enter to exit')
+# input('Hit enter to exit')
 
 # vehicle.sensors.poll('state')
 # data = lidar.poll()['pointCloud']
@@ -217,6 +259,8 @@ uss_fr.remove()
 uss_r.remove()
 uss_rl.remove()
 uss_rr.remove()
+uss_left.remove()
+uss_right.remove()
 vehicle.detach_sensor('electrics')
 electrics.detach(vehicle, 'electrics')
 electrics.disconnect(bng, vehicle)
