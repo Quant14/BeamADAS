@@ -182,18 +182,23 @@ vehicle.attach_sensor('timer', timer)
 timer.attach(vehicle, 'timer')
 timer.connect(bng, vehicle)
 
-input('Hit enter to start camera')
-time.sleep(5)
-for i in range(0, 30, 1):
-    # plt.imsave('img' + str(i) + '.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
-    camera_data = camera.stream_colour(3686400)
-    camera_data = np.array(camera_data).reshape(height, width, 4)
-    camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
-    Image.fromarray(camera_data, 'L').save('img' + str(i) + '.png', "PNG")
-
 # vehicle.ai_set_speed(22, 'limit')
 # vehicle.ai_drive_in_lane(True)
 # vehicle.ai_set_mode('span')
+
+input('Hit enter to start camera')
+time.sleep(120)
+for i in range(0, 60, 1):
+    # plt.imsave('img' + str(i) + '.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
+    if i % 2 == 0:
+        bng.pause()
+        camera_data = camera.stream_colour(3686400)
+        camera_data = np.array(camera_data).reshape(height, width, 4)
+        camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+        Image.fromarray(camera_data, 'L').save('img' + str(i//2) + '.png', "PNG")
+        bng.resume()
+    else:
+        vehicle.sensors.poll('timer')
 
 # time.sleep(15)
 
