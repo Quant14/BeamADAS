@@ -682,43 +682,48 @@ local function getDefaultState(itype)
 end
 
 local function evalAdasActive(filter)
-  if filter == 0 then 
+  if filter == 0 then -- user steering always active
     return true
   end
 
-  if not adas_active and filter == 1 then
-    -- adas_timer = timer.data()['time']
-    adas_active = true
-    return true
-  end
-
-  if adas_active then
-    return filter == 1
-  else
-    return filter == 22
+  if adas_active then -- ADAS active state
+    if filter == 1: -- allow only control() input
+      adas_timer = timer.data()['time']
+      return true
+    else if timer.data()['time'] - adas_timer > 0.1: -- if no control() input for last 100ms, allow user control
+      adas_active = false
+      return true
+    end
+    return false -- user input and recent control() input
+  else -- ADAS ready state
+    if filter == 1: -- control() input detected, go into ADAS active state
+      adas_timer = timer.data()['time']
+      adas_active = true
+    end
+    return true -- allow all inputs
   end
 end
 
 local function event(itype, ivalue, filter, angle, lockType, source)
-  -- if evalAdasActive(filter) then -- control() pedals + user steering
-  if M.state[itype] == nil then -- probably a vehicle-specific input
-    log("W", "", "The vehicle-specific input event " .. dumps(itype) .. " was not defined, so gamepad smoothing, keyboard smoothing, and safe range of values is unknown. The vehicle creator should define this input event type, for example executing lua code such as 'input.state[" .. dumps(itype) .. "] = { minLimit=xxx, maxLimit=xxx, smootherKBD=..., smootherPAD=... }' during vehicle initialization (please search input.lua for more context). As safety fallback, a default definition will be used, which may or may not be suitable")
-    M.state[itype] = getDefaultState(itype)
+  if evalAdasActive(filter) then -- eval if input should be processed or ignored
+    if M.state[itype] == nil then -- probably a vehicle-specific input
+      log("W", "", "The vehicle-specific input event " .. dumps(itype) .. " was not defined, so gamepad smoothing, keyboard smoothing, and safe range of values is unknown. The vehicle creator should define this input event type, for example executing lua code such as 'input.state[" .. dumps(itype) .. "] = { minLimit=xxx, maxLimit=xxx, smootherKBD=..., smootherPAD=... }' during vehicle initialization (please search input.lua for more context). As safety fallback, a default definition will be used, which may or may not be suitable")
+      M.state[itype] = getDefaultState(itype)
+    end
+
+    source = source or "local"
+
+    M.lastInputs[source] = M.lastInputs[source] or {}
+    M.lastInputs[source][itype] = ivalue
+
+    if not M.allowedInputSources[itype] or M.allowedInputSources[itype][source] then
+      M.state[itype].val = ivalue
+      M.state[itype].filter = filter
+      M.state[itype].angle = angle
+      M.state[itype].lockType = lockType
+      M.state[itype].source = source
+    end
   end
-
-  source = source or "local"
-
-  M.lastInputs[source] = M.lastInputs[source] or {}
-  M.lastInputs[source][itype] = ivalue
-
-  if not M.allowedInputSources[itype] or M.allowedInputSources[itype][source] then
-    M.state[itype].val = ivalue
-    M.state[itype].filter = filter
-    M.state[itype].angle = angle
-    M.state[itype].lockType = lockType
-    M.state[itype].source = source
-  end
-  -- end
 end
 
 local function toggleEvent(itype)
