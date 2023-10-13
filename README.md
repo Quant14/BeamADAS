@@ -11,14 +11,20 @@ This is a project, aimed at developing a realistic ADAS system using BeamNG.tech
 7. (X) If an object is closing in too quickly from behind and it is safe to do so, apply throttle to avoid collision from behind.
 
 ## Relation between host and processor
-The host uses BeamNGpy to get live sensor data from BeamNG.tech and send it to the processor (separate microcomputer, connected to the host via USB). The processor calculates the adjustments that need to be made to the inputs of the vehicle and sends them back to the host. The host can then apply those changes to the vehicle inputs inside the simulation. 
+The host uses BeamNGpy to get live sensor data from BeamNG.tech and send it to the processor (separate microcomputer, connected via USB). The processor analyzes the sensor data and sends back to the host if action needs to be taken and what (set pedal inputs to x%). The host can then apply those changes to the vehicle inputs inside the simulation (a small BeamNG mod package is required). 
 
 ## Progress log
+#### 9-13th Oct 2023
+Testing of BeamNG.tech v0.30.5 sensor streaming and performance benchmarks.
+Switched to pausing concept (pausing the simulation while waiting for sensor data to be received).
+Big advancement in controlling the vehicle by filtering out user pedal inputs when needed (needs testing).
+Serial communication with Raspberry Pi research.
+Generated new camera testing images and started work on road curvature detection consistency and accuracy.
 #### 2-6th Oct 2023
 Adjustment of project requirements based on new information about the issues found the previous week.
 Raspberry Pi initial setup.
 Research into Lua and preventing interference between the driver's inputs and the ADAS' inputs.
-Start upgrade from v0.29.1 to v0.30.5
+Start upgrade from BeamNG.tech v0.29.1 to v0.30.5
 #### 25-29th Sep 2023
 Further specification of project requirements.
 Identified issues related to sensors latency and LiDAR data analysis. 
