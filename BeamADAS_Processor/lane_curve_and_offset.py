@@ -1,12 +1,9 @@
 # This script will process the sensor data coming from the host and send back a response
 # including the adjustments that need to be made to the user input
 
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import numpy as np
 import cv2
-
-# img = cv2.imread('.\\test_curve_1.png')
-# img2 = cv2.imread('.\\test_curve_2.png')
 
 class LaneCurve:
     def __init__(self):
@@ -16,9 +13,9 @@ class LaneCurve:
         self.left_fit_hist = np.array([])
         self.right_fit_hist = np.array([])
 
-    def birdeye_view(img):
+    def birdeye_view(self, img):
         img_size = (img.shape[1], img.shape[0])
-        offset = 400
+        offset = 350
 
         # Source points taken from images with straight lane lines, these are to become parallel after the warp transform
         # Needs to be updated with accurate lane coordinates
@@ -46,21 +43,31 @@ class LaneCurve:
     # birdeye_img, M_inv = birdeye_view(img)
     # plt.imsave('birdeye_img.png', birdeye_img)
 
-    def binary_threshold(img):
+    def binary_threshold(self, img):
         # Apply sobel in x direction (detect vertical lines)
-        sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0) # type: ignore
-        abs_sobelx = np.absolute(sobelx)
+        blur = cv2.GaussianBlur(img, (5, 5), 0)
+        # sobelx = cv2.Sobel(blur, cv2.CV_64F, 1, 0) # type: ignore
+        # abs_sobelx = np.absolute(sobelx)
 
-        scaled_sobel = np.uint8(255 * abs_sobelx / np.max(abs_sobelx))
-        sx_binary = np.zeros_like(scaled_sobel)
+        # scaled_sobel = np.array(255 * abs_sobelx / np.max(abs_sobelx), dtype=np.uint8)
+        # sx_binary = np.zeros_like(scaled_sobel)
         
-        sx_binary[(scaled_sobel >= 200) & (scaled_sobel <= 255)] = 1
+        # sx_binary[(scaled_sobel >= 20) & (scaled_sobel <= 60)] = 1
+
+        # # Test different edge finding technique
+        # new_binary = cv2.Canny(blur, 120, 200)
+
+        # plt.imshow(sx_binary)
+        # plt.imshow(new_binary)
+        # plt.show()
+        # exit()
 
         # Detect white pixels
-        white_binary = np.zeros_like(img)
-        white_binary[(img > 200) & (img <= 255)] = 1
+        white_binary = np.zeros_like(blur)
+        white_binary[(blur > 190) & (blur <= 240)] = 1
 
-        return cv2.bitwise_or(sx_binary, white_binary)
+        return white_binary
+        # return cv2.bitwise_or(new_binary, white_binary)
 
     # Test 2 - successful
     # binary = binary_threshold(img)
@@ -72,7 +79,7 @@ class LaneCurve:
     # plt.imsave('binary_birdeye.png', binary_birdeye)
     # binary_birdeye_2, M_inv_2 = birdeye_view(binary_threshold(img2))
 
-    def detect_lane_lines(binary_birdeye):
+    def detect_lane_lines(self, binary_birdeye):
         # Make histogram of bottom half of img
         histogram = np.sum(binary_birdeye[binary_birdeye.shape[0] // 2:,:], axis=0)
 
@@ -125,11 +132,13 @@ class LaneCurve:
             left_lane = np.concatenate(left_lane)
             right_lane = np.concatenate(right_lane)
         except ValueError:
+            plt.imshow(binary_birdeye)
+            plt.show()
             exit("No lines detected!")
 
         return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane] # type: ignore
 
-    def fit_poly(binary_birdeye, leftx, lefty, rightx, righty):
+    def fit_poly(self, binary_birdeye, leftx, lefty, rightx, righty):
         left_fit = np.polyfit(lefty, leftx, 2)
         right_fit = np.polyfit(righty, rightx, 2)
 
@@ -145,7 +154,7 @@ class LaneCurve:
 
         return left_fit, right_fit, left_fitx, right_fitx, ploty
 
-    def draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty):     
+    def draw_poly_lines(self, binary_birdeye, left_fitx, right_fitx, ploty):     
         # Create an image to draw on and an image to show the selection window
         out_img = np.dstack((binary_birdeye, binary_birdeye, binary_birdeye))*255
         window_img = np.zeros_like(out_img)
@@ -168,8 +177,8 @@ class LaneCurve:
         result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
         
         # Plot the polynomial lines onto the image
-        # plt.plot(left_fitx, ploty, color='green')
-        # plt.plot(right_fitx, ploty, color='blue')
+        plt.plot(left_fitx, ploty, color='green')
+        plt.plot(right_fitx, ploty, color='blue')
         ## End visualization steps ##
         return result
         
@@ -183,7 +192,7 @@ class LaneCurve:
 
     # prev_left_fit, prev_right_fit = left_fit, right_fit
 
-    def find_lane_pixels_using_prev_poly(binary_birdeye):
+    def find_lane_pixels_using_prev_poly(self, binary_birdeye):
         # Possible margin to prev frame
         margin = 100
 
@@ -209,7 +218,7 @@ class LaneCurve:
     # out_img = draw_poly_lines(binary_birdeye_2, left_fitx, right_fitx, ploty)
     # plt.imsave("birdeye_lines_detected_2.png", out_img)
 
-    def measure_curvature(left_fitx, right_fitx, ploty):
+    def measure_curvature(self, left_fitx, right_fitx, ploty):
         # Define meters per pixel
         ym_ppx = 30 / 720
         xm_ppx = 3.7 / 700
@@ -229,7 +238,7 @@ class LaneCurve:
     # left_curve, right_curve = measure_curvature(left_fitx, right_fitx, ploty)
     # print('Left curve: ' + str(left_curve) + '; Right curve: ' + str(right_curve))
 
-    def measure_pos(binary_birdeye, left_fit, right_fit):
+    def measure_pos(self, binary_birdeye, left_fit, right_fit):
         # Define meters per pixel
         xm_per_pix = 3.7 / 700
 
@@ -249,13 +258,13 @@ class LaneCurve:
     # offset = measure_pos(binary_birdeye_2, left_fit, right_fit)
     # print('Offset: ' + str(offset))
 
-    def lane_pipeline(self, img):
-        binary = binary_threshold(img)
-        binary_birdeye, M_inv = birdeye_view(binary)
+    def lane_pipeline(self, img, i):
+        binary = self.binary_threshold(img)
+        binary_birdeye, M_inv = self.birdeye_view(binary)
 
         if (len(self.left_fit_hist) == 0):
-            leftx, lefty, rightx, righty = detect_lane_lines(binary_birdeye)
-            left_fit, right_fit, left_fitx, right_fitx, ploty = fit_poly(binary_birdeye, leftx, lefty, rightx, righty)
+            leftx, lefty, rightx, righty = self.detect_lane_lines(binary_birdeye)
+            left_fit, right_fit, left_fitx, right_fitx, ploty = self.fit_poly(binary_birdeye, leftx, lefty, rightx, righty)
 
             self.left_fit_hist = np.array(left_fit)
             self.right_fit_hist = np.array(right_fit)
@@ -266,12 +275,12 @@ class LaneCurve:
         else:
             self.prev_left_fit = [np.mean(self.left_fit_hist[:,0]), np.mean(self.left_fit_hist[:,1]), np.mean(self.left_fit_hist[:,2])]
             self.prev_right_fit = [np.mean(self.right_fit_hist[:,0]), np.mean(self.right_fit_hist[:,1]), np.mean(self.right_fit_hist[:,2])]
-            leftx, lefty, rightx, righty = find_lane_pixels_using_prev_poly(binary_birdeye)
+            leftx, lefty, rightx, righty = self.find_lane_pixels_using_prev_poly(binary_birdeye)
 
             if (len(lefty) == 0 or len(righty) == 0):
-                leftx, lefty, rightx, righty = detect_lane_lines(binary_birdeye)
-            left_fit, right_fit, left_fitx, right_fitx, ploty = fit_poly(binary_birdeye,leftx, lefty, rightx, righty)
-            
+                leftx, lefty, rightx, righty = self.detect_lane_lines(binary_birdeye)
+            left_fit, right_fit, left_fitx, right_fitx, ploty = self.fit_poly(binary_birdeye,leftx, lefty, rightx, righty)             
+
             new_left_fit = np.array(left_fit)
             new_right_fit = np.array(right_fit)
             self.left_fit_hist = np.vstack([self.left_fit_hist, new_left_fit])
@@ -280,9 +289,9 @@ class LaneCurve:
             if (len(self.left_fit_hist) > 5):
                 self.left_fit_hist = np.delete(self.left_fit_hist, 0,0)
                 self.right_fit_hist = np.delete(self.right_fit_hist, 0,0)
-                                        
-        left_rad, right_rad =  measure_curvature(left_fitx, right_fitx, ploty)
-        return left_rad, right_rad, measure_pos(binary_birdeye, left_fit, right_fit)
-
-# print(lane_pipeline(img))
-# print(lane_pipeline(img2))
+                   
+        a = self.draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)            
+        plt.imsave('proc_img' + str(i) + '.png', a)       
+        
+        left_rad, right_rad =  self.measure_curvature(left_fitx, right_fitx, ploty)
+        return left_rad, right_rad, self.measure_pos(binary_birdeye, left_fit, right_fit)
