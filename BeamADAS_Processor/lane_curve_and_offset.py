@@ -88,7 +88,7 @@ class LaneCurve:
         left_base = np.argmax(histogram[:midpoint])
         right_base = np.argmax(histogram[midpoint:]) + midpoint
 
-        nwindows = 15
+        nwindows = 9
         margin = 100 
         minpix = 50
 
