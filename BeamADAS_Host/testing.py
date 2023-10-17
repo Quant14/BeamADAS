@@ -12,6 +12,7 @@ height = 720
 
 from beamngpy import BeamNGpy, Scenario, Vehicle
 from beamngpy.sensors import Camera, Lidar, Ultrasonic, Electrics, Timer
+from beamngpy.tools import OpenStreetMapExporter
 
 # Open BeamNG.tech home directory
 home = open(os.path.join(os.getcwd(), "bngtechdir.txt"), "r")
@@ -26,10 +27,10 @@ bng.open()
 scenario = Scenario('italy', 'test')
 # scenario = Scenario('smallgrid', 'test')
 
-vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.1, 0.5, 0.1, 1))
+vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.21, 0.23, 0.14, 1))
 # box = Vehicle('box', model='metal_box')
 
-scenario.add_vehicle(vehicle, pos=(1205, -824, 146), rot_quat=(-0.278, -0.025, -0.953, 0.302))
+scenario.add_vehicle(vehicle, pos=(1216.629, -824.389, 145.414), rot_quat=(-0.014, 0.012, -0.518, 0.855)) # SP1
 # scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
 # scenario.add_vehicle(box, pos=(0, -5, 0))
 scenario.make(bng)
@@ -182,38 +183,42 @@ vehicle.attach_sensor('timer', timer)
 timer.attach(vehicle, 'timer')
 timer.connect(bng, vehicle)
 
-# vehicle.ai_set_speed(22, 'limit')
+# vehicle.ai_set_speed(27, 'set')
 # vehicle.ai_drive_in_lane(True)
 # vehicle.ai_set_mode('span')
 
-input('Hit enter to start camera')
-time.sleep(120)
-for i in range(0, 60, 1):
-    # plt.imsave('img' + str(i) + '.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
-    if i % 2 == 0:
-        bng.pause()
-        camera_data = camera.stream_colour(3686400)
-        camera_data = np.array(camera_data).reshape(height, width, 4)
-        camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
-        Image.fromarray(camera_data, 'L').save('img' + str(i//2) + '.png', "PNG")
-        bng.resume()
-    else:
-        vehicle.sensors.poll('timer')
+OpenStreetMapExporter.export('road_network', bng)
 
-# time.sleep(15)
+# input('Hit enter to start camera')
+# time.sleep(120)
+# for i in range(0, 60, 1):
+#     # plt.imsave('img' + str(i) + '.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
+#     if i % 2 == 0:
+#         bng.pause()
+#         camera_data = camera.stream_colour(3686400)
+#         camera_data = np.array(camera_data).reshape(height, width, 4)
+#         camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+#         Image.fromarray(camera_data, 'L').save('img' + str(i//2) + '.png', "PNG")
+#         bng.resume()
+#     else:
+#         vehicle.sensors.poll('timer')
 
-# # --- Emergency brake ---
-# vehicle.sensors.poll('electrics')
-# brake = electrics.data['brake_input']
+time.sleep(5)
+print('braking')
+# --- Emergency brake ---
+vehicle.sensors.poll('electrics')
+brake = electrics.data['brake_input']
 
-# while abs(electrics.data['wheelspeed']) >= 0.05:
-#     vehicle.control(throttle=0)
-#     vehicle.control(brake=1)
-#     vehicle.sensors.poll('electrics')
+while abs(electrics.data['wheelspeed']) >= 0.05:
+    vehicle.control(throttle=0)
+    vehicle.control(brake=1)
+    vehicle.sensors.poll('electrics')
 
-# vehicle.control(brake=brake)
-# vehicle.control(parkingbrake=1.0)
-# # -----------------------
+vehicle.control(brake=brake)
+vehicle.control(parkingbrake=1.0)
+# -----------------------
+
+print('done')
 
 #  ----------- Timing benchmarks ---------------
     # print(time.time())

@@ -17,11 +17,11 @@ def init():
     bng.open()
 
     # Set map
-    # scenario = Scenario('italy', 'test')
-    scenario = Scenario('smallgrid', 'test')
+    scenario = Scenario('italy', 'test')
+    # scenario = Scenario('smallgrid', 'test')
 
     # Create vehicles
-    vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.1, 0.4, 0.1, 1))
+    vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.31, 0.33, 0.24, 1))
     # box = Vehicle('box', model='metal_box')
 
     # Add vehicles to scenario

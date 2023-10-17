@@ -687,17 +687,18 @@ local function evalAdasActive(filter)
   end
 
   if adas_active then -- ADAS active state
-    if filter == 1: -- allow only control() input
-      adas_timer = timer.data()['time']
+    if filter == 1 then -- allow only control() input
+      adas_timer = get
       return true
-    else if timer.data()['time'] - adas_timer > 0.1: -- if no control() input for last 100ms, allow user control
-      adas_active = false
-      return true
+    -- else if timer.data()['time'] - adas_timer > 1 then -- if no control() input for last 100ms, allow user control
+    --     adas_active = false
+    --     return true
+    --   end
     end
     return false -- user input and recent control() input
   else -- ADAS ready state
-    if filter == 1: -- control() input detected, go into ADAS active state
-      adas_timer = timer.data()['time']
+    if filter == 1 then -- control() input detected, go into ADAS active state
+      -- adas_timer = timer.data()['time']
       adas_active = true
     end
     return true -- allow all inputs
