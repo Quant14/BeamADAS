@@ -12,7 +12,7 @@ height = 720
 
 from beamngpy import BeamNGpy, Scenario, Vehicle
 from beamngpy.sensors import Camera, Lidar, Ultrasonic, Electrics, Timer
-from beamngpy.tools import OpenStreetMapExporter
+from beamngpy.tools import OpenDriveExporter
 
 # Open BeamNG.tech home directory
 home = open(os.path.join(os.getcwd(), "bngtechdir.txt"), "r")
@@ -187,7 +187,11 @@ timer.connect(bng, vehicle)
 # vehicle.ai_drive_in_lane(True)
 # vehicle.ai_set_mode('span')
 
-OpenStreetMapExporter.export('road_network', bng)
+try:
+    OpenDriveExporter.compute_roads_and_junctions()
+except Exception as e:
+    pass
+OpenDriveExporter.export('road_network', bng)
 
 # input('Hit enter to start camera')
 # time.sleep(120)
