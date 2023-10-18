@@ -15,15 +15,15 @@ class LaneCurve:
 
     def birdeye_view(self, img):
         img_size = (img.shape[1], img.shape[0])
-        offset = 350
+        offset = 450
 
         # Source points taken from images with straight lane lines, these are to become parallel after the warp transform
         # Needs to be updated with accurate lane coordinates
         src = np.array([
-            (390, 545), # bottom-left corner
-            (602, 380), # top-left corner
-            (677, 380), # top-right corner
-            (883, 545) # bottom-right corner
+            (408, 530), # bottom-left corner
+            (616, 370), # top-left corner
+            (665, 370), # top-right corner
+            (864, 530) # bottom-right corner
         ], dtype='f')
         dst = np.array([
             [offset, img_size[1]],             # bottom-left corner
@@ -89,7 +89,7 @@ class LaneCurve:
         right_base = np.argmax(histogram[midpoint:]) + midpoint
 
         nwindows = 9
-        margin = 100 
+        margin = 150 
         minpix = 50
 
         window_h = np.int32(binary_birdeye.shape[0]//nwindows)
@@ -103,6 +103,9 @@ class LaneCurve:
 
         left_lane = []
         right_lane = []
+
+        weight_left = 0
+        weight_right = 0
 
         for window in range(nwindows):
             win_y_low = binary_birdeye.shape[0] - (window + 1) * window_h
@@ -121,10 +124,12 @@ class LaneCurve:
             # Add lane data and recenter windows if needed
             if good_left_lane.size != 0:
                 left_lane.append(good_left_lane)
+                weight_left += 1
                 if len(good_right_lane) > minpix:
                     left_curr = np.int32(np.mean(nonzerox[good_left_lane]))
             if good_right_lane.size != 0:
                 right_lane.append(good_right_lane)
+                weight_right += 1
                 if len(good_right_lane) > minpix:
                     right_curr = np.int32(np.mean(nonzerox[good_right_lane]))
 
@@ -136,7 +141,7 @@ class LaneCurve:
             plt.show()
             exit("No lines detected!")
 
-        return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane] # type: ignore
+        return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane], weight_left, weight_right # type: ignore
 
     def fit_poly(self, binary_birdeye, leftx, lefty, rightx, righty):
         left_fit = np.polyfit(lefty, leftx, 2)
@@ -194,7 +199,7 @@ class LaneCurve:
 
     def find_lane_pixels_using_prev_poly(self, binary_birdeye):
         # Possible margin to prev frame
-        margin = 100
+        margin = 150
 
         # Retrieve activated pixels from prev frame
         nonzero = binary_birdeye.nonzero()
@@ -261,9 +266,10 @@ class LaneCurve:
     def lane_pipeline(self, img, i):
         binary = self.binary_threshold(img)
         binary_birdeye, M_inv = self.birdeye_view(binary)
+        weight_left, weight_right = 0, 0
 
         if (len(self.left_fit_hist) == 0):
-            leftx, lefty, rightx, righty = self.detect_lane_lines(binary_birdeye)
+            leftx, lefty, rightx, righty, weight_left, weight_right = self.detect_lane_lines(binary_birdeye)
             left_fit, right_fit, left_fitx, right_fitx, ploty = self.fit_poly(binary_birdeye, leftx, lefty, rightx, righty)
 
             self.left_fit_hist = np.array(left_fit)
@@ -278,7 +284,7 @@ class LaneCurve:
             leftx, lefty, rightx, righty = self.find_lane_pixels_using_prev_poly(binary_birdeye)
 
             if (len(lefty) == 0 or len(righty) == 0):
-                leftx, lefty, rightx, righty = self.detect_lane_lines(binary_birdeye)
+                leftx, lefty, rightx, righty, weight_left, weight_right = self.detect_lane_lines(binary_birdeye)
             left_fit, right_fit, left_fitx, right_fitx, ploty = self.fit_poly(binary_birdeye,leftx, lefty, rightx, righty)             
 
             new_left_fit = np.array(left_fit)
@@ -293,5 +299,7 @@ class LaneCurve:
         a = self.draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)            
         plt.imsave('proc_img' + str(i) + '.png', a)       
         
+        # FINISH THIS !!!
+        # if weight_left > weight_right
         left_rad, right_rad =  self.measure_curvature(left_fitx, right_fitx, ploty)
         return left_rad, right_rad, self.measure_pos(binary_birdeye, left_fit, right_fit)
