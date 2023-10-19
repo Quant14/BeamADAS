@@ -89,7 +89,7 @@ class LaneCurve:
         right_base = np.argmax(histogram[midpoint:]) + midpoint
 
         nwindows = 9
-        margin = 150 
+        margin = 100 
         minpix = 50
 
         window_h = np.int32(binary_birdeye.shape[0]//nwindows)
@@ -133,6 +133,10 @@ class LaneCurve:
                 if len(good_right_lane) > minpix:
                     right_curr = np.int32(np.mean(nonzerox[good_right_lane]))
 
+            if good_left_lane.size > good_right_lane.size:
+                print('left')
+            else:
+                print('right')
         try:
             left_lane = np.concatenate(left_lane)
             right_lane = np.concatenate(right_lane)
@@ -215,6 +219,7 @@ class LaneCurve:
                         self.prev_right_fit[1] * nonzeroy + self.prev_right_fit[2] + margin))).nonzero()[0]
         
         # Retrieve new left and right lane positions
+        # if np.sum(nonzerox[left_lane])
         return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane]
 
     # Test 5 - successful
@@ -300,6 +305,10 @@ class LaneCurve:
         plt.imsave('proc_img' + str(i) + '.png', a)       
         
         # FINISH THIS !!!
-        # if weight_left > weight_right
         left_rad, right_rad =  self.measure_curvature(left_fitx, right_fitx, ploty)
-        return left_rad, right_rad, self.measure_pos(binary_birdeye, left_fit, right_fit)
+        pos = self.measure_pos(binary_birdeye, left_fit, right_fit)
+
+        if weight_left >= weight_right:
+            return left_rad, pos
+        else:
+            return right_rad, pos
