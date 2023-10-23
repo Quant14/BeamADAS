@@ -13,7 +13,15 @@ This is a project, aimed at developing a realistic ADAS system using BeamNG.tech
 ## Relation between host and processor
 The host uses BeamNGpy to get live sensor data from BeamNG.tech and send it to the processor (separate microcomputer, connected via USB). The processor analyzes the sensor data and sends back to the host if action needs to be taken and what (set pedal inputs to x%). The host can then apply those changes to the vehicle inputs inside the simulation (a small BeamNG mod package is required). 
 
+## System diagram
+<img src="https://github.com/Quant14/BeamADAS/blob/main/media/beamadas_diagram.png?raw=true">
+
 ## Progress log
+#### 16-20th Oct 2023
+Improved road curvature detection accuracy.
+Started work on a way to calculate lane weights and use the curvature radius value only of the lane that is accurately calculated.
+Created a system diagram of the project.
+Started work on an official requirements sheet for the project.
 #### 9-13th Oct 2023
 Testing of BeamNG.tech v0.30.5 sensor streaming and performance benchmarks.
 Switched to pausing concept (pausing the simulation while waiting for sensor data to be received).
