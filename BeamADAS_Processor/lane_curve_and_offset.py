@@ -104,9 +104,6 @@ class LaneCurve:
         left_lane = []
         right_lane = []
 
-        weight_left = 0
-        weight_right = 0
-
         for window in range(nwindows):
             win_y_low = binary_birdeye.shape[0] - (window + 1) * window_h
             win_y_high = binary_birdeye.shape[0] - window * window_h
@@ -124,19 +121,13 @@ class LaneCurve:
             # Add lane data and recenter windows if needed
             if good_left_lane.size != 0:
                 left_lane.append(good_left_lane)
-                weight_left += 1
                 if len(good_right_lane) > minpix:
                     left_curr = np.int32(np.mean(nonzerox[good_left_lane]))
             if good_right_lane.size != 0:
                 right_lane.append(good_right_lane)
-                weight_right += 1
                 if len(good_right_lane) > minpix:
                     right_curr = np.int32(np.mean(nonzerox[good_right_lane]))
 
-            if good_left_lane.size > good_right_lane.size:
-                print('left')
-            else:
-                print('right')
         try:
             left_lane = np.concatenate(left_lane)
             right_lane = np.concatenate(right_lane)
@@ -145,7 +136,7 @@ class LaneCurve:
             plt.show()
             exit("No lines detected!")
 
-        return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane], weight_left, weight_right # type: ignore
+        return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane] # type: ignore
 
     def fit_poly(self, binary_birdeye, leftx, lefty, rightx, righty):
         left_fit = np.polyfit(lefty, leftx, 2)
@@ -161,7 +152,11 @@ class LaneCurve:
             left_fitx = ploty**2 + ploty
             right_fitx = ploty**2 + ploty
 
-        return left_fit, right_fit, left_fitx, right_fitx, ploty
+        weight = 0
+        if left_fitx[0] > left_fitx[719] and right_fitx[0] > right_fitx[719]:
+            weight = 1
+
+        return left_fit, right_fit, left_fitx, right_fitx, ploty, weight
 
     def draw_poly_lines(self, binary_birdeye, left_fitx, right_fitx, ploty):     
         # Create an image to draw on and an image to show the selection window
@@ -218,8 +213,6 @@ class LaneCurve:
                         self.prev_right_fit[2] - margin)) & (nonzerox < (self.prev_right_fit[0] * (nonzeroy**2) + 
                         self.prev_right_fit[1] * nonzeroy + self.prev_right_fit[2] + margin))).nonzero()[0]
         
-        # Retrieve new left and right lane positions
-        # if np.sum(nonzerox[left_lane])
         return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane]
 
     # Test 5 - successful
@@ -271,11 +264,11 @@ class LaneCurve:
     def lane_pipeline(self, img, i):
         binary = self.binary_threshold(img)
         binary_birdeye, M_inv = self.birdeye_view(binary)
-        weight_left, weight_right = 0, 0
+        weight = 0
 
         if (len(self.left_fit_hist) == 0):
-            leftx, lefty, rightx, righty, weight_left, weight_right = self.detect_lane_lines(binary_birdeye)
-            left_fit, right_fit, left_fitx, right_fitx, ploty = self.fit_poly(binary_birdeye, leftx, lefty, rightx, righty)
+            leftx, lefty, rightx, righty = self.detect_lane_lines(binary_birdeye)
+            left_fit, right_fit, left_fitx, right_fitx, ploty, weight = self.fit_poly(binary_birdeye, leftx, lefty, rightx, righty)
 
             self.left_fit_hist = np.array(left_fit)
             self.right_fit_hist = np.array(right_fit)
@@ -289,8 +282,8 @@ class LaneCurve:
             leftx, lefty, rightx, righty = self.find_lane_pixels_using_prev_poly(binary_birdeye)
 
             if (len(lefty) == 0 or len(righty) == 0):
-                leftx, lefty, rightx, righty, weight_left, weight_right = self.detect_lane_lines(binary_birdeye)
-            left_fit, right_fit, left_fitx, right_fitx, ploty = self.fit_poly(binary_birdeye,leftx, lefty, rightx, righty)             
+                leftx, lefty, rightx, righty = self.detect_lane_lines(binary_birdeye)
+            left_fit, right_fit, left_fitx, right_fitx, ploty, weight = self.fit_poly(binary_birdeye,leftx, lefty, rightx, righty)             
 
             new_left_fit = np.array(left_fit)
             new_right_fit = np.array(right_fit)
@@ -304,11 +297,10 @@ class LaneCurve:
         a = self.draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)            
         plt.imsave('proc_img' + str(i) + '.png', a)       
         
-        # FINISH THIS !!!
         left_rad, right_rad =  self.measure_curvature(left_fitx, right_fitx, ploty)
         pos = self.measure_pos(binary_birdeye, left_fit, right_fit)
 
-        if weight_left >= weight_right:
-            return left_rad, pos
-        else:
+        if weight:
             return right_rad, pos
+        else:
+            return left_rad, pos
