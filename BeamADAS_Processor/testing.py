@@ -3,6 +3,7 @@ import serial
 ser = serial.Serial('/dev/ttyS0', baudrate=115200)
 
 # Check communication
+print('Waiting for connection...')
 ser.timeout = 60
 if ser.readline() == b'Pi check connection\n':
     ser.timeout = 1
