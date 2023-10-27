@@ -16,8 +16,9 @@ import struct
 adas_state = 0 # states: 0 = off, 1 = on, 2 = ready, 3 = active
 
 # Initialize simulation
+print('Initializing simulation...')
 home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init()
-ser = serial.Serial('COM5', baudrate=115200)
+ser = serial.Serial('COM6', baudrate=115200)
 adas_state = 1
 
 vehicle.sensors.poll('electrics', 'timer', 'state')
@@ -25,49 +26,56 @@ speed = electrics.data['wheelspeed']
 second = 0
 
 # Check connection with Pi4 to set adas_state to ready
+print('Connecting to Pi4...')
+ser.timeout = 1
+ser.write(b'Pi check connection\n')
+if ser.readline() == b'Host check connection\n':
+    ser.write(b'OK\n')
+    print('OK')
+    adas_state = 2
+    ser.timeout = None
 
-while(electrics.data['running']):
-    bng.pause()
+    while(electrics.data['running']):
+        bng.pause()
 
-    # Update misc data
-    vehicle.sensors.poll('electrics', 'timer', 'state')
-    speed = electrics.data['wheelspeed']
+        # Update misc data
+        vehicle.sensors.poll('electrics', 'timer', 'state')
+        speed = electrics.data['wheelspeed']
 
-    # Get ADAS sensors data
-    if speed >= 8.333: # Speed for LiDAR
-        lidar_data_readonly = lidar.stream()
-        lidar_data = lidar_data_readonly.copy()
-        pos = lidar_data_readonly.state['pos']
+        # Get ADAS sensors data
+        if speed >= 8.333: # Speed for LiDAR
+            lidar_data_readonly = lidar.stream()
+            lidar_data = lidar_data_readonly.copy()
+            pos = vehicle.state['pos']
 
-        for i in range(0, len(lidar_data)):
-            if lidar_data[i] == 0:
-                break
-            lidar_data[i] = lidar_data[i] - pos[i % 3]
-        size = struct.pack('1i', *len(lidar_data))
-        ser.write(size)
-        lidar_data = struct.pack(str(len(lidar_data)) + 'f', *lidar_data)
-        ser.write(lidar_data)
+            for i in range(0, len(lidar_data)):
+                if lidar_data[i] == 0:
+                    break
+                lidar_data[i] = lidar_data[i] - pos[i % 3]
+            
 
-        if speed >= 11.111 and second % 3 == 0: # Speed for camera
-            camera_data = camera.stream_colour(3686400)
-            camera_data = np.array(camera_data).reshape(height, width, 4)
-            camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
-            Image.fromarray(camera_data, 'L').save("sh_mem.png", "PNG") # Replace with send over serial port
-    
-    elif speed <= 3.333 and second % 3 == 0: # Parking speed
-        park_data = [uss_f.stream(), uss_fl.stream(), uss_fr.stream(), 
-                    uss_r.stream(), uss_rl.stream(), uss_rr.stream()]
+            if speed >= 11.111 and second % 3 == 0: # Speed for camera
+                camera_data = camera.stream_colour(3686400)
+                camera_data = np.array(camera_data).reshape(height, width, 4)
+                camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+                Image.fromarray(camera_data, 'L').save("sh_mem.png", "PNG") # Replace with send over serial port
+        
+        elif speed <= 3.333 and second % 3 == 0: # Parking speed
+            park_data = [uss_f.stream(), uss_fl.stream(), uss_fr.stream(), 
+                        uss_r.stream(), uss_rl.stream(), uss_rr.stream()]
 
-    # Blind spot detection
-    blind_data = [uss_left.stream(), uss_right.stream()]
+        # Blind spot detection
+        blind_data = [uss_left.stream(), uss_right.stream()]
 
-    bng.resume()
+        bng.resume()
 
-    # Wait and read data from serial port
+        # Wait and read data from serial port
 
-    # Act on the simulation
-    second += 1
-    vehicle.control(throttle=(second % 100) / 200)
+        # Act on the simulation
+else:
+    print('Connection error')
+
 # Free resources
+print('Exiting...')
 ser.close()
 host.destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer)

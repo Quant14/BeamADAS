@@ -1,6 +1,0 @@
-{
-  "bindings":[
-    {"control":"down", "action":"brake", "filterType":22},
-    {"control":"up", "action":"accelerate", "filterType":22},
-  ]
-}

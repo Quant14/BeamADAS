@@ -81,8 +81,13 @@ local autocenterN = nil
 
 local min, max, abs, sqrt = math.min, math.max, math.abs, math.sqrt
 
-local adas_active = false
-local adas_timer = 0
+-- local adasActive = false
+-- local adasLast = 0
+
+local lastAdasBrake = 0
+local lastAdasThrottle = 0
+local lastDriverBrake = 0
+local lastDriverThrottle = 0
 
 local function init()
   --inRate (towards the center), outRate (away from the center), autoCenterRate, startingValue
@@ -681,32 +686,54 @@ local function getDefaultState(itype)
   }
 end
 
-local function evalAdasActive(filter)
-  if filter == 0 then -- user steering always active
+local function evalAdasActive(itype, ivalue, filter)
+  if itype == 'steering' then
     return true
   end
 
-  if adas_active then -- ADAS active state
-    if filter == 1 then -- allow only control() input
-      adas_timer = get
-      return true
-    -- else if timer.data()['time'] - adas_timer > 1 then -- if no control() input for last 100ms, allow user control
-    --     adas_active = false
-    --     return true
-    --   end
+  -- Value-based evaluation
+  if itype == 'brake' then
+    if filter == 1 then
+      lastAdasBrake = ivalue
+      return ivalue > lastDriverBrake
+    else
+      lastDriverBrake = ivalue
+      return ivalue > lastAdasBrake
     end
-    return false -- user input and recent control() input
-  else -- ADAS ready state
-    if filter == 1 then -- control() input detected, go into ADAS active state
-      -- adas_timer = timer.data()['time']
-      adas_active = true
+  else if itype == 'throttle' then
+      if filter == 1 then
+        lastAdasThrottle = ivalue
+        return ivalue < lastDriverThrottle
+      else
+        lastDriverThrottle = ivalue
+        return ivalue < lastAdasThrottle
+      end
     end
-    return true -- allow all inputs
   end
+  
+  -- Not value-based evaluation
+  -- if adasActive then -- ADAS active state
+  --   if filter == 1 then -- allow only control() input
+  --     adasLast = adasTime
+  --     return true
+  --   else if adasTime - adasLast > 0.3 then -- if no control() input for last 300ms, allow user control
+        
+  --       adasActive = false
+  --       return true
+  --     end
+  --   end
+  --   return false -- user input and recent control() input
+  -- else -- ADAS ready state
+  --   if filter == 1 then -- control() input detected, go into ADAS active state
+  --     adasLast = adasTime
+  --     adasActive = true
+  --   end
+  --   return true -- allow all inputs
+  -- end
 end
 
 local function event(itype, ivalue, filter, angle, lockType, source)
-  if evalAdasActive(filter) then -- eval if input should be processed or ignored
+  if evalAdasActive(itype, ivalue, filter) then -- eval if input should be processed or ignored
     if M.state[itype] == nil then -- probably a vehicle-specific input
       log("W", "", "The vehicle-specific input event " .. dumps(itype) .. " was not defined, so gamepad smoothing, keyboard smoothing, and safe range of values is unknown. The vehicle creator should define this input event type, for example executing lua code such as 'input.state[" .. dumps(itype) .. "] = { minLimit=xxx, maxLimit=xxx, smootherKBD=..., smootherPAD=... }' during vehicle initialization (please search input.lua for more context). As safety fallback, a default definition will be used, which may or may not be suitable")
       M.state[itype] = getDefaultState(itype)
