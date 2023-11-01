@@ -85,7 +85,7 @@ local min, max, abs, sqrt = math.min, math.max, math.abs, math.sqrt
 -- local adasLast = 0
 
 local lastAdasBrake = 0
-local lastAdasThrottle = 0
+local lastAdasThrottle = 100
 local lastDriverBrake = 0
 local lastDriverThrottle = 0
 
@@ -695,18 +695,18 @@ local function evalAdasActive(itype, ivalue, filter)
   if itype == 'brake' then
     if filter == 1 then
       lastAdasBrake = ivalue
-      return ivalue > lastDriverBrake
+      return ivalue >= lastDriverBrake
     else
       lastDriverBrake = ivalue
-      return ivalue > lastAdasBrake
+      return ivalue >= lastAdasBrake
     end
   else if itype == 'throttle' then
       if filter == 1 then
         lastAdasThrottle = ivalue
-        return ivalue < lastDriverThrottle
+        return ivalue <= lastDriverThrottle
       else
         lastDriverThrottle = ivalue
-        return ivalue < lastAdasThrottle
+        return ivalue <= lastAdasThrottle
       end
     end
   end

@@ -30,7 +30,7 @@ scenario = Scenario('italy', 'test')
 vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.21, 0.23, 0.14, 1))
 # box = Vehicle('box', model='metal_box')
 
-scenario.add_vehicle(vehicle, pos=(1216.629, -824.389, 145.414), rot_quat=(-0.014, 0.012, -0.518, 0.855)) # SP1
+scenario.add_vehicle(vehicle, pos=(1219.629, -826.389, 145.414), rot_quat=(-0.014, 0.012, -0.518, 0.855)) # SP1
 # scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
 # scenario.add_vehicle(box, pos=(0, -5, 0))
 scenario.make(bng)
@@ -183,29 +183,29 @@ vehicle.attach_sensor('timer', timer)
 timer.attach(vehicle, 'timer')
 timer.connect(bng, vehicle)
 
-# vehicle.ai_set_speed(27, 'set')
-# vehicle.ai_drive_in_lane(True)
-# vehicle.ai_set_mode('span')
+vehicle.ai_set_speed(22, 'limit')
+vehicle.ai_drive_in_lane(True)
+vehicle.ai_set_mode('span')
 
-try:
-    OpenDriveExporter.compute_roads_and_junctions()
-except Exception as e:
-    pass
-OpenDriveExporter.export('road_network', bng)
+# try:
+#     OpenDriveExporter.compute_roads_and_junctions()
+# except Exception as e:
+#     pass
+# OpenDriveExporter.export('road_network', bng)
 
 # input('Hit enter to start camera')
-# time.sleep(120)
-# for i in range(0, 60, 1):
-#     # plt.imsave('img' + str(i) + '.png', np.asarray(camera.poll()['colour'].convert('L')), cmap='gray')
-#     if i % 2 == 0:
-#         bng.pause()
-#         camera_data = camera.stream_colour(3686400)
-#         camera_data = np.array(camera_data).reshape(height, width, 4)
-#         camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
-#         Image.fromarray(camera_data, 'L').save('img' + str(i//2) + '.png', "PNG")
-#         bng.resume()
-#     else:
-#         vehicle.sensors.poll('timer')
+time.sleep(120)
+for i in range(0, 60, 1):
+    if i % 2 == 0:
+        bng.pause()
+        camera_data = camera.stream_colour(3686400)
+        camera_data = np.array(camera_data).reshape(height, width, 4)
+        camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+        Image.fromarray(camera_data, 'L').save('img' + str(i//2) + '.png', "PNG")
+        bng.resume()
+    else:
+        vehicle.sensors.poll('timer')
+        print(timer.data['time'])
 
 time.sleep(5)
 print('braking')
@@ -218,8 +218,8 @@ while abs(electrics.data['wheelspeed']) >= 0.05:
     vehicle.control(brake=1)
     vehicle.sensors.poll('electrics')
 
-vehicle.control(brake=brake)
-vehicle.control(parkingbrake=1.0)
+vehicle.control(brake=0.0)
+vehicle.control(parkingbrake=0.0)
 # -----------------------
 
 print('done')
@@ -263,6 +263,25 @@ print('done')
 #         lidar_file.write(str(Decimal(a - vehLoc[(i - 1) % 3]).quantize(Decimal('0.001'), ROUND_HALF_UP)) + ', ')
 
 # plt.imsave('img.png', np.asarray(data['colour'].convert('RGB')))
+
+# LiDAR coordinates transformation testing
+# Method 1 - 113 ms
+# lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
+# pos = vehicle.state['pos']
+
+# for i in range(0, len(lidar_data)):
+#     lidar_data[i] = lidar_data[i] - pos[i % 3]
+
+# Method 2 - 35 ms
+# lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
+# lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
+# pos = np.array(vehicle.state['pos'])
+
+# transform = np.identity(4)
+# transform[:3, 3] = -pos
+
+# lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
+# lidar_data = np.dot(lidar_data, transform.T)[:, :3]
 
 camera.remove()
 lidar_file.close()

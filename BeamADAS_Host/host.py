@@ -17,16 +17,16 @@ def init():
     bng.open()
 
     # Set map
-    # scenario = Scenario('italy', 'test')
-    scenario = Scenario('smallgrid', 'test')
+    scenario = Scenario('italy', 'test')
+    # scenario = Scenario('smallgrid', 'test')
 
     # Create vehicles
     vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.31, 0.33, 0.24, 1))
     # box = Vehicle('box', model='metal_box')
 
     # Add vehicles to scenario
-    # scenario.add_vehicle(vehicle, pos=(1216.629, -824.389, 145.414), rot_quat=(-0.014, 0.012, -0.518, 0.855)) # SP1
-    scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
+    scenario.add_vehicle(vehicle, pos=(1216.629, -824.389, 145.414), rot_quat=(-0.014, 0.012, -0.518, 0.855)) # SP1
+    # scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
     # scenario.add_vehicle(box, pos=(0, -5, 0))
     
     # Load scenario

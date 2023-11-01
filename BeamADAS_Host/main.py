@@ -45,14 +45,16 @@ if ser.readline() == b'Host check connection\n':
         # Get ADAS sensors data
         if speed >= 8.333: # Speed for LiDAR
             lidar_data_readonly = lidar.stream()
-            lidar_data = lidar_data_readonly.copy()
-            pos = vehicle.state['pos']
+            pos = np.array(vehicle.state['pos'])
 
-            for i in range(0, len(lidar_data)):
-                if lidar_data[i] == 0:
-                    break
-                lidar_data[i] = lidar_data[i] - pos[i % 3]
-            
+            lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
+            lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
+
+            transform = np.identity(4)
+            transform[:3, 3] = -pos
+
+            lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
+            lidar_data = np.dot(lidar_data, transform.T)[:, :3]
 
             if speed >= 11.111 and second % 3 == 0: # Speed for camera
                 camera_data = camera.stream_colour(3686400)
