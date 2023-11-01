@@ -17,6 +17,11 @@ The host uses BeamNGpy to get live sensor data from BeamNG.tech and send it to t
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/beamadas_diagram.png?raw=true">
 
 ## Progress log
+#### 23-27th Oct 2023
+Completed official requirements sheet.
+Set up successful communication between host and processor. 
+Discovered issues related to Raspberry Pi4 processing speed. 
+Created naive lane weight system (needs testing).
 #### 16-20th Oct 2023
 Improved road curvature detection accuracy.
 Started work on a way to calculate lane weights and use the curvature radius value only of the lane that is accurately calculated.
