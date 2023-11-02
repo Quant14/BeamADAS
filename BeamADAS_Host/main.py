@@ -27,13 +27,13 @@ second = 0
 
 # Check connection with Pi4 to set adas_state to ready
 print('Connecting to Pi4...')
-ser.timeout = 1
+# ser.timeout = 5
 ser.write(b'Pi check connection\n')
 if ser.readline() == b'Host check connection\n':
     ser.write(b'OK\n')
     print('OK')
     adas_state = 2
-    ser.timeout = None
+    # ser.timeout = None
 
     while(electrics.data['running']):
         bng.pause()
@@ -55,6 +55,9 @@ if ser.readline() == b'Host check connection\n':
 
             lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
             lidar_data = np.dot(lidar_data, transform.T)[:, :3]
+
+            lidar_data = lidar_data.reshape(-1)
+            ser.write(struct.pack('H', len(lidar_data)) + b''.join(struct.pack('f', f) for f in lidar_data))
 
             if speed >= 11.111 and second % 3 == 0: # Speed for camera
                 camera_data = camera.stream_colour(3686400)
