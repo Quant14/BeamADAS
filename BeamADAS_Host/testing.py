@@ -193,36 +193,36 @@ vehicle.ai_set_mode('span')
 #     pass
 # OpenDriveExporter.export('road_network', bng)
 
-# input('Hit enter to start camera')
-time.sleep(120)
-for i in range(0, 60, 1):
-    if i % 2 == 0:
-        bng.pause()
-        camera_data = camera.stream_colour(3686400)
-        camera_data = np.array(camera_data).reshape(height, width, 4)
-        camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
-        Image.fromarray(camera_data, 'L').save('img' + str(i//2) + '.png', "PNG")
-        bng.resume()
-    else:
-        vehicle.sensors.poll('timer')
-        print(timer.data['time'])
+input('Hit enter to start camera')
+# time.sleep(120)
+# for i in range(0, 60, 1):
+#     if i % 2 == 0:
+#         bng.pause()
+#         camera_data = camera.stream_colour(3686400)
+#         camera_data = np.array(camera_data).reshape(height, width, 4)
+#         camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+#         Image.fromarray(camera_data, 'L').save('img' + str(i//2) + '.png', "PNG")
+#         bng.resume()
+#     else:
+#         vehicle.sensors.poll('timer')
+#         print(timer.data['time'])
 
-time.sleep(5)
-print('braking')
-# --- Emergency brake ---
-vehicle.sensors.poll('electrics')
-brake = electrics.data['brake_input']
+# time.sleep(5)
+# print('braking')
+# # --- Emergency brake ---
+# vehicle.sensors.poll('electrics')
+# brake = electrics.data['brake_input']
 
-while abs(electrics.data['wheelspeed']) >= 0.05:
-    vehicle.control(throttle=0)
-    vehicle.control(brake=1)
-    vehicle.sensors.poll('electrics')
+# while abs(electrics.data['wheelspeed']) >= 0.05:
+#     vehicle.control(throttle=0)
+#     vehicle.control(brake=1)
+#     vehicle.sensors.poll('electrics')
 
-vehicle.control(brake=0.0)
-vehicle.control(parkingbrake=0.0)
-# -----------------------
+# vehicle.control(brake=0.0)
+# vehicle.control(parkingbrake=0.0)
+# # -----------------------
 
-print('done')
+# print('done')
 
 #  ----------- Timing benchmarks ---------------
     # print(time.time())

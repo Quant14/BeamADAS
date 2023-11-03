@@ -12,6 +12,7 @@ height = 720
 
 import serial
 import struct
+import io
 
 adas_state = 0 # states: 0 = off, 1 = on, 2 = ready, 3 = active
 
@@ -19,6 +20,7 @@ adas_state = 0 # states: 0 = off, 1 = on, 2 = ready, 3 = active
 print('Initializing simulation...')
 home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init()
 ser = serial.Serial('COM6', baudrate=115200)
+stream = io.BytesIO()
 adas_state = 1
 
 vehicle.sensors.poll('electrics', 'timer', 'state')
@@ -63,8 +65,31 @@ if ser.readline() == b'Host check connection\n':
                 camera_data = camera.stream_colour(3686400)
                 camera_data = np.array(camera_data).reshape(height, width, 4)
                 camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
-                Image.fromarray(camera_data, 'L').save("sh_mem.png", "PNG") # Replace with send over serial port
-        
+                camera_data = Image.fromarray(camera_data, 'L')
+                # Method 1 - 40.602 seconds
+                t1 = time.time()
+                camera_data.save('sh_mem.png', 'PNG')
+                img = open('sh_mem.png', 'rb').read()
+                ser.write(len(img).to_bytes(4) + img)
+                t1 = time.time() - t1
+                # Method 2 - 79.903 seconds
+                t2 = time.time()
+                img = camera_data.tobytes()
+                ser.write(len(img).to_bytes(4) + img)
+                t2 = time.time() - t2
+                # Method 3 - 40.671 seconds
+                t3 = time.time()
+                stream.seek(0)
+                stream.truncate(0)
+                camera_data.save(stream, 'PNG')
+                img = stream.getvalue()
+                ser.write(len(img).to_bytes(4) + img)
+                t3 = time.time() - t3
+                print(t1)
+                print(t2)
+                print(t3)
+                break
+
         elif speed <= 3.333 and second % 3 == 0: # Parking speed
             park_data = [uss_f.stream(), uss_fl.stream(), uss_fr.stream(), 
                         uss_r.stream(), uss_rl.stream(), uss_rr.stream()]
@@ -73,6 +98,7 @@ if ser.readline() == b'Host check connection\n':
         blind_data = [uss_left.stream(), uss_right.stream()]
 
         bng.resume()
+        second += 1
 
         # Wait and read data from serial port
 
@@ -82,5 +108,6 @@ else:
 
 # Free resources
 print('Exiting...')
+stream.close()
 ser.close()
 host.destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer)
