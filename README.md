@@ -17,6 +17,10 @@ The host uses BeamNGpy to get live sensor data from BeamNG.tech and send it to t
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/beamadas_diagram.png?raw=true">
 
 ## Progress log
+#### 1-3rd Nov 2023
+Successful LiDAR data transfer at reasonable speed. LiDAR resolution reduced for performance reasons.
+Image data transfer testing. Huge serial port bottleneck. Solution required immediately for faster image transfer.
+Testing planning.
 #### 23-27th Oct 2023
 Completed official requirements sheet.
 Set up successful communication between host and processor. 
