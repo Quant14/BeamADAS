@@ -54,20 +54,20 @@ camera = Camera('camera',
             is_streaming=True,
             is_using_shared_memory=True)
 lidar = Lidar('lidar', 
-            bng, 
-            vehicle, 
-            requested_update_time=0.03,
-            update_priority=1,
-            pos=(0, -2.25, 0.60), 
-            dir=(-1, 0.1, 0), 
-            vertical_resolution=60, 
-            vertical_angle=20, 
-            rays_per_second=172800,
-            frequency=30, 
-            horizontal_angle=30,
-            max_distance=150,
-            is_visualised=False,
-            is_streaming=True)
+                bng, 
+                vehicle, 
+                requested_update_time=0.03,
+                update_priority=1,
+                pos=(0, -2.25, 0.60), 
+                dir=(-1, 0.1, 0), 
+                vertical_resolution=20, 
+                vertical_angle=10, 
+                rays_per_second=19800,
+                frequency=30, 
+                horizontal_angle=30,
+                max_distance=150,
+                is_visualised=True,
+                is_streaming=True)
 uss_f = Ultrasonic('uss_f', 
                 bng, 
                 vehicle, 
@@ -193,7 +193,23 @@ vehicle.ai_set_mode('span')
 #     pass
 # OpenDriveExporter.export('road_network', bng)
 
-input('Hit enter to start camera')
+for i in range(0, 4):
+    input('Hit enter to take lidar snap')
+
+    lidar_data_readonly = lidar.stream()
+    pos = np.array(vehicle.state['pos'])
+
+    lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
+    lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
+
+    transform = np.identity(4)
+    transform[:3, 3] = -pos
+
+    lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
+    lidar_data = np.dot(lidar_data, transform.T)[:, :3]
+
+    np.savetxt('lidar' + str(i) + '.txt', lidar_data, delimiter=' ')
+# input('Hit enter to start camera')
 # time.sleep(120)
 # for i in range(0, 60, 1):
 #     if i % 2 == 0:
@@ -282,6 +298,23 @@ input('Hit enter to start camera')
 
 # lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
 # lidar_data = np.dot(lidar_data, transform.T)[:, :3]
+
+# Sending camera over serial
+# # Method 1 - 40.602 seconds
+# camera_data.save('sh_mem.png', 'PNG')
+# img = open('sh_mem.png', 'rb').read()
+# ser.write(len(img).to_bytes(4) + img)
+# # Method 2 - 79.903 seconds
+# img = camera_data.tobytes()
+# ser.write(len(img).to_bytes(4) + img)
+# # Method 3 - 40.671 seconds
+# stream = io.BytesIO()
+# stream.seek(0)
+# stream.truncate(0)
+# camera_data.save(stream, 'PNG')
+# img = stream.getvalue()
+# ser.write(len(img).to_bytes(4) + img)
+# stream.close()
 
 camera.remove()
 lidar_file.close()
