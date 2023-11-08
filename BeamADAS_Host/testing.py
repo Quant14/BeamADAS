@@ -30,8 +30,9 @@ scenario = Scenario('italy', 'test')
 vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.21, 0.23, 0.14, 1))
 # box = Vehicle('box', model='metal_box')
 
-scenario.add_vehicle(vehicle, pos=(1219.629, -826.389, 145.414), rot_quat=(-0.014, 0.012, -0.518, 0.855)) # SP1
-# scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
+scenario.add_vehicle(vehicle, pos=(1216.629, -824.389, 145.414), rot_quat=(-0.014, 0.012, -0.518, 0.855)) # SP1
+# scenario.add_vehicle(vehicle, pos=(-1331.383, 1565.515, 152.679), rot_quat=(0, 0.005, 0.639, 0.769)) # SP2
+# scenario.add_vehicle(vehicle, pos=(0, 0, 0.206)) # smallgrid
 # scenario.add_vehicle(box, pos=(0, -5, 0))
 scenario.make(bng)
 
@@ -47,7 +48,7 @@ camera = Camera('camera',
             pos=(0, -0.35, 1.3), 
             resolution=(1280, 720), 
             field_of_view_y=60, 
-            near_far_planes=(0.05, 200), 
+            near_far_planes=(0.1, 150), 
             is_render_colours=True, 
             is_render_annotations=False, 
             is_render_depth=False,
@@ -61,12 +62,12 @@ lidar = Lidar('lidar',
                 pos=(0, -2.25, 0.60), 
                 dir=(-1, 0.1, 0), 
                 vertical_resolution=20, 
-                vertical_angle=10, 
+                vertical_angle=5, 
                 rays_per_second=19800,
                 frequency=30, 
-                horizontal_angle=30,
-                max_distance=150,
-                is_visualised=True,
+                horizontal_angle=20,
+                max_distance=100,
+                is_visualised=False,
                 is_streaming=True)
 uss_f = Ultrasonic('uss_f', 
                 bng, 
@@ -187,28 +188,41 @@ vehicle.ai_set_speed(22, 'limit')
 vehicle.ai_drive_in_lane(True)
 vehicle.ai_set_mode('span')
 
+bng.spawn_traffic()
+
 # try:
 #     OpenDriveExporter.compute_roads_and_junctions()
 # except Exception as e:
 #     pass
 # OpenDriveExporter.export('road_network', bng)
+time.sleep(60)
+for i in range(0, 5):
+    time.sleep(60)
+    for j in range(0, 15):
+        bng.pause()
+        vehicle.sensors.poll('state')
+        lidar_data_readonly = lidar.stream()
+        pos = np.array(vehicle.state['pos'])
 
-for i in range(0, 4):
-    input('Hit enter to take lidar snap')
+        lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
+        lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
 
-    lidar_data_readonly = lidar.stream()
-    pos = np.array(vehicle.state['pos'])
+        transform = np.identity(4)
+        transform[:3, 3] = -pos
 
-    lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
-    lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
+        lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
+        lidar_data = np.dot(lidar_data, transform.T)[:, :3]
 
-    transform = np.identity(4)
-    transform[:3, 3] = -pos
+        np.savetxt('sp1/sample' + str(i) + '/lidar/pc' + str(j) + '.txt', lidar_data, delimiter=' ')
 
-    lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
-    lidar_data = np.dot(lidar_data, transform.T)[:, :3]
+        if j % 3 == 0:
+            camera_data = camera.stream_colour(3686400)
+            camera_data = np.array(camera_data).reshape(height, width, 4)
+            camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+            Image.fromarray(camera_data, 'L').save('sp1/sample' + str(i) + '/cam/img' + str(j) + '.png', "PNG")
 
-    np.savetxt('lidar' + str(i) + '.txt', lidar_data, delimiter=' ')
+        bng.resume()
+
 # input('Hit enter to start camera')
 # time.sleep(120)
 # for i in range(0, 60, 1):
