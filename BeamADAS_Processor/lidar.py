@@ -48,7 +48,7 @@ for j in range(0, 5):
             elif i == 1:
                 dbscan = DBSCAN(eps=1, min_samples=15, n_jobs=1, algorithm='ball_tree') # middle
             else:
-                dbscan = DBSCAN(eps=1.5, min_samples=10, n_jobs=1, algorithm='ball_tree') # far
+                dbscan = DBSCAN(eps=1.5, min_samples=8, n_jobs=1, algorithm='ball_tree') # far
 
             clusters = dbscan.fit_predict(segment_data)
             for cluster_id in np.unique(clusters[clusters != -1]):

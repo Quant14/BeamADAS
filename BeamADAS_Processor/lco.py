@@ -20,10 +20,10 @@ class LaneCurve:
         # Source points taken from images with straight lane lines, these are to become parallel after the warp transform
         # Needs to be updated with accurate lane coordinates
         src = np.array([
-            (408, 530), # bottom-left corner
-            (616, 370), # top-left corner
-            (665, 370), # top-right corner
-            (864, 530) # bottom-right corner
+            (390, 547), # bottom-left corner
+            (627, 371), # top-left corner
+            (654, 371), # top-right corner
+            (903, 547) # bottom-right corner
         ], dtype='f')
         dst = np.array([
             [offset, img_size[1]],             # bottom-left corner
