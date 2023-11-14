@@ -17,8 +17,7 @@ class LaneCurve:
         img_size = (img.shape[1], img.shape[0])
         offset = 450
 
-        # Source points taken from images with straight lane lines, these are to become parallel after the warp transform
-        # Needs to be updated with accurate lane coordinates
+        # Source points taken from images with straight lane lines
         src = np.array([
             (390, 547), # bottom-left corner
             (627, 371), # top-left corner

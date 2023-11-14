@@ -26,13 +26,8 @@ from sklearn.cluster import DBSCAN
 
 # lidar_data = np.array(data).reshape((size // 3, 3))
 
-for j in range(0, 5):
-    print(j * 3)
-    path = f'sp2/sample4/lidar/pc{j * 3}.txt'
-    # path = 'sp2/sample3/lidar/pc0.txt'
-    lidar_data = np.genfromtxt(path, delimiter=' ')
-    lidar_data_original = lidar_data
-    distance_thresholds = [(2.5, 25.0), (25.0, 60.0), (60.0, 100.0)]
+def find_clusters(lidar_data):
+    distance_thresholds = [(2.5, 25.0), (25.0, 50.0), (50.0, 100.0)]
 
     # Do work
     cluster_data = []
@@ -46,7 +41,7 @@ for j in range(0, 5):
             if i == 0:
                 dbscan = DBSCAN(eps=0.5, min_samples=30, n_jobs=1, algorithm='ball_tree') # near
             elif i == 1:
-                dbscan = DBSCAN(eps=1, min_samples=15, n_jobs=1, algorithm='ball_tree') # middle
+                dbscan = DBSCAN(eps=1, min_samples=12, n_jobs=1, algorithm='ball_tree') # middle
             else:
                 dbscan = DBSCAN(eps=1.5, min_samples=8, n_jobs=1, algorithm='ball_tree') # far
 
@@ -66,17 +61,25 @@ for j in range(0, 5):
 
         print(f"Segment {j}, Cluster {cluster_id}: Closest point {closest_point}, Distance: {distance} meters")
 
-    x = lidar_data_original[:, 0]
-    y = lidar_data_original[:, 1]
-    z = lidar_data_original[:, 2]
+for j in range(0, 5):
+    print(j * 3)
+    path = f'sp2/sample2/lidar/pc{j * 3}.txt'
+    lidar_data = np.genfromtxt(path, delimiter=' ')
+    find_clusters(lidar_data)
+    # lidar_data_original = lidar_data # Plotting
 
-    plot = plt.figure().add_subplot(111, projection='3d')
-    plot.scatter(x, y, z, alpha=0.1)
+    # Plotting
+    # x = lidar_data_original[:, 0]
+    # y = lidar_data_original[:, 1]
+    # z = lidar_data_original[:, 2]
 
-    for cluster_info in cluster_data:
-        j, cluster_id, cluster_points = cluster_info
-        plot.scatter(cluster_points[:, 0], cluster_points[:, 1], cluster_points[:, 2], alpha=1)
+    # plot = plt.figure().add_subplot(111, projection='3d')
+    # plot.scatter(x, y, z, alpha=0.1)
 
-    plot.axis('equal')
-    plt.show()
+    # for cluster_info in cluster_data:
+    #     j, cluster_id, cluster_points = cluster_info
+    #     plot.scatter(cluster_points[:, 0], cluster_points[:, 1], cluster_points[:, 2], alpha=1)
+
+    # plot.axis('equal')
+    # plt.show()
 # ser.close()
