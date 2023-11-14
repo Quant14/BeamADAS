@@ -6,7 +6,7 @@ import os
 from beamngpy import BeamNGpy, Scenario, Vehicle
 from beamngpy.sensors import Camera, Lidar, Ultrasonic, Electrics, Timer
 
-def init():
+def init(sp, traffic):
     # Open BeamNG.tech home directory
     home = open(os.path.join(os.getcwd(), "bngtechdir.txt"), "r")
 
@@ -16,18 +16,19 @@ def init():
 
     bng.open()
 
-    # Set map
-    scenario = Scenario('italy', 'test')
-    # scenario = Scenario('smallgrid', 'test')
-
     # Create vehicles
     vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.31, 0.33, 0.24, 1))
-    # box = Vehicle('box', model='metal_box')
 
-    # Add vehicles to scenario
-    scenario.add_vehicle(vehicle, pos=(1216.629, -824.389, 145.414), rot_quat=(-0.014, 0.012, -0.518, 0.855)) # SP1
-    # scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
-    # scenario.add_vehicle(box, pos=(0, -5, 0))
+    # Load map and spawn vehicle
+    if sp == 'sp1' or sp == 'sp1_no_traffic':
+        scenario = Scenario('italy', 'test')
+        scenario.add_vehicle(vehicle, pos=(1216.629, -824.389, 145.414), rot_quat=(-0.014, 0.012, -0.518, 0.855)) # SP1
+    elif sp == 'sp2' or sp == 'sp2_no_traffic':
+        scenario = Scenario('italy', 'test')
+        scenario.add_vehicle(vehicle, pos=(-1331.383, 1565.515, 152.679), rot_quat=(0, 0.005, 0.639, 0.769)) # SP2
+    elif sp == 'sp0':
+        scenario = Scenario('smallgrid', 'test')
+        scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
     
     # Load scenario
     scenario.make(bng)
@@ -41,12 +42,11 @@ def init():
     camera = Camera('camera', 
             bng, 
             vehicle, 
-            requested_update_time=0.06,
-            update_priority=1,
+            requested_update_time=0.09,
             pos=(0, -0.35, 1.3), 
             resolution=(1280, 720), 
-            field_of_view_y=60, 
-            near_far_planes=(0.05, 200), 
+            field_of_view_y=55,
+            near_far_planes=(0.1, 100), 
             is_render_colours=True, 
             is_render_annotations=False, 
             is_render_depth=False,
@@ -56,16 +56,15 @@ def init():
                 bng, 
                 vehicle, 
                 requested_update_time=0.03,
-                update_priority=1,
                 pos=(0, -2.25, 0.60), 
                 dir=(-1, 0.1, 0), 
                 vertical_resolution=20, 
-                vertical_angle=10, 
-                rays_per_second=19800,
+                vertical_angle=5, 
+                rays_per_second=18000,
                 frequency=30, 
-                horizontal_angle=30,
-                max_distance=150,
-                is_visualised=True,
+                horizontal_angle=20,
+                max_distance=100,
+                is_visualised=False,
                 is_streaming=True)
     uss_f = Ultrasonic('uss_f', 
                     bng, 
@@ -181,6 +180,15 @@ def init():
     vehicle.attach_sensor('timer', timer)
     timer.attach(vehicle, 'timer')
     timer.connect(bng, vehicle)
+
+    # Set AI driver
+    vehicle.ai_set_speed(22.222, 'limit')
+    vehicle.ai_drive_in_lane(True)
+    vehicle.ai_set_mode('span')
+
+    # Set AI traffic
+    if traffic:
+        bng.spawn_traffic()
 
     return home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer
 

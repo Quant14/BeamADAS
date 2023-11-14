@@ -17,9 +17,9 @@ import io
 adas_state = 0 # states: 0 = off, 1 = on, 2 = ready, 3 = active
 
 # Initialize simulation
+ser = serial.Serial('COM8', baudrate=115200)
 print('Initializing simulation...')
 home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init()
-ser = serial.Serial('COM6', baudrate=115200)
 adas_state = 1
 
 vehicle.sensors.poll('electrics', 'timer', 'state')
@@ -46,7 +46,8 @@ if ser.readline() == b'Host check connection\n':
         # Get ADAS sensors data
         if speed >= 8.333: # Speed for LiDAR
             lidar_data_readonly = lidar.stream()
-            pos = np.array(vehicle.state['pos'])
+            pos = np.array([vehicle.state['pos'][0], vehicle.state['pos'][1] - 2.25, vehicle.state['pos'][2] + 0.6])
+            direction = vehicle.state['dir']
 
             lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
             lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
@@ -56,6 +57,9 @@ if ser.readline() == b'Host check connection\n':
 
             lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
             lidar_data = np.dot(lidar_data, transform.T)[:, :3]
+
+            vectors = lidar_data - np.array([0, 0, 0])
+            lidar_data = lidar_data[np.dot(vectors, direction) >= 0]
 
             lidar_data = lidar_data.reshape(-1)
             ser.write(struct.pack('H', len(lidar_data)) + b''.join(struct.pack('f', f) for f in lidar_data))

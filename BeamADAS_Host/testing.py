@@ -1,5 +1,7 @@
 # This script will gather sensor information from BeamNG.tech and send it to the external controller for processing
 
+import host
+
 import sys
 import os
 import time
@@ -14,228 +16,62 @@ from beamngpy import BeamNGpy, Scenario, Vehicle
 from beamngpy.sensors import Camera, Lidar, Ultrasonic, Electrics, Timer
 from beamngpy.tools import OpenDriveExporter
 
-# Open BeamNG.tech home directory
-home = open(os.path.join(os.getcwd(), "bngtechdir.txt"), "r")
-lidar_file = open(os.path.join(os.getcwd(), "lidar.txt"), "w")
+# dirs = ['sp1', 'sp1_no_traffic', 'sp2', 'sp2_no_traffic']
+dirs = ['sp2_no_traffic']
 
-# Instantiate BeamNGpy instance running the simulator from the given path,
-# communicating over localhost:4771
-bng = BeamNGpy('localhost', 4771, home=home.readline())
+for curr_dir in dirs:
+    home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init(curr_dir, len(curr_dir) == 3)
 
-bng.open()
+    # input('Hit enter to start camera')
+    # camera_data = camera.stream_colour(3686400)
+    # camera_data = np.array(camera_data).reshape(height, width, 4)
+    # camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+    # Image.fromarray(camera_data, 'L').save('calibration.png', "PNG")
+    # break
 
-scenario = Scenario('italy', 'test')
-# scenario = Scenario('smallgrid', 'test')
+    time.sleep(60)
+    for i in range(0, 5):
+        time.sleep(60)
+        for j in range(0, 15):
+            bng.pause()
+            vehicle.sensors.poll('state')
+            lidar_data_readonly = lidar.stream()
+            pos = np.array([vehicle.state['pos'][0], vehicle.state['pos'][1] - 2.25, vehicle.state['pos'][2] + 0.6])
+            direction = vehicle.state['dir']
 
-vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.21, 0.23, 0.14, 1))
-# box = Vehicle('box', model='metal_box')
+            lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
+            lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
 
-scenario.add_vehicle(vehicle, pos=(1216.629, -824.389, 145.414), rot_quat=(-0.014, 0.012, -0.518, 0.855)) # SP1
-# scenario.add_vehicle(vehicle, pos=(-1331.383, 1565.515, 152.679), rot_quat=(0, 0.005, 0.639, 0.769)) # SP2
-# scenario.add_vehicle(vehicle, pos=(0, 0, 0.206)) # smallgrid
-# scenario.add_vehicle(box, pos=(0, -5, 0))
-scenario.make(bng)
+            transform = np.identity(4)
+            transform[:3, 3] = -pos
 
-bng.scenario.load(scenario)
-bng.settings.set_deterministic(30)
-bng.scenario.start()
+            lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
+            lidar_data = np.dot(lidar_data, transform.T)[:, :3]
 
-camera = Camera('camera', 
-            bng, 
-            vehicle, 
-            requested_update_time=0.06,
-            update_priority=1,
-            pos=(0, -0.35, 1.3), 
-            resolution=(1280, 720), 
-            field_of_view_y=60, 
-            near_far_planes=(0.1, 150), 
-            is_render_colours=True, 
-            is_render_annotations=False, 
-            is_render_depth=False,
-            is_streaming=True,
-            is_using_shared_memory=True)
-lidar = Lidar('lidar', 
-                bng, 
-                vehicle, 
-                requested_update_time=0.03,
-                update_priority=1,
-                pos=(0, -2.25, 0.60), 
-                dir=(-1, 0.1, 0), 
-                vertical_resolution=20, 
-                vertical_angle=5, 
-                rays_per_second=19800,
-                frequency=30, 
-                horizontal_angle=20,
-                max_distance=100,
-                is_visualised=False,
-                is_streaming=True)
-uss_f = Ultrasonic('uss_f', 
-                bng, 
-                vehicle, 
-                requested_update_time=0.06,
-                pos=(0, -2.3, 0.4), 
-                dir=(0, -1, 0), 
-                field_of_view_y=45, 
-                near_far_planes=(0.1, 8.0), 
-                range_min_cutoff=0.1, 
-                range_direct_max_cutoff=8.0,
-                sensitivity=0.005, 
-                is_visualised=False,
-                is_streaming=True)
-uss_fl = Ultrasonic('uss_fl', 
-                bng, 
-                vehicle, 
-                requested_update_time=0.06,
-                pos=(0.78, -2.0, 0.4), 
-                dir=(0.5, -0.5, 0), 
-                field_of_view_y=45, 
-                near_far_planes=(0.1, 3.0), 
-                range_min_cutoff=0.1, 
-                range_direct_max_cutoff=3.0,
-                sensitivity=0.005, 
-                is_visualised=False,
-                is_streaming=True)
-uss_fr = Ultrasonic('uss_fr', 
-                bng, 
-                vehicle, 
-                requested_update_time=0.06,
-                pos=(-0.78, -2.0, 0.4), 
-                dir=(-0.5, -0.5, 0), 
-                field_of_view_y=45, 
-                near_far_planes=(0.1, 3.0), 
-                range_min_cutoff=0.1, 
-                range_direct_max_cutoff=3.0,
-                sensitivity=0.005, 
-                is_visualised=False,
-                is_streaming=True)
-uss_r = Ultrasonic('uss_r', 
-                bng, 
-                vehicle, 
-                requested_update_time=0.06,
-                pos=(0, 2.4, 0.4), 
-                dir=(0, 1, 0), 
-                field_of_view_y=45, 
-                near_far_planes=(0.1, 3.0), 
-                range_min_cutoff=0.1, 
-                range_direct_max_cutoff=3.0,
-                sensitivity=0.005, 
-                is_visualised=False,
-                is_streaming=True)
-uss_rl = Ultrasonic('uss_rl', 
-                bng, 
-                vehicle, 
-                requested_update_time=0.06,
-                pos=(0.8, 2.1, 0.4), 
-                dir=(0.5, 0.5, 0), 
-                field_of_view_y=45, 
-                near_far_planes=(0.1, 3.0), 
-                range_min_cutoff=0.1, 
-                range_direct_max_cutoff=3.0,
-                sensitivity=0.005, 
-                is_visualised=False,
-                is_streaming=True)
-uss_rr = Ultrasonic('uss_rr', 
-                bng, 
-                vehicle, 
-                requested_update_time=0.06,
-                pos=(-0.8, 2.1, 0.4), 
-                dir=(-0.5, 0.5, 0), 
-                field_of_view_y=45, 
-                near_far_planes=(0.1, 3.0), 
-                range_min_cutoff=0.1, 
-                range_direct_max_cutoff=3.0,
-                sensitivity=0.005, 
-                is_visualised=False,
-                is_streaming=True)
-uss_left = Ultrasonic('uss_left',
-                bng,
-                vehicle,
-                requested_update_time=0.06,
-                pos=(0.95, -0.4, 0.95),
-                dir=(0.6, 0.4, 0),
-                field_of_view_y=60,
-                near_far_planes=(0.1, 3.0), 
-                range_min_cutoff=0.1, 
-                range_direct_max_cutoff=3.0,
-                sensitivity=0.01, 
-                is_visualised=False,
-                is_streaming=True)
-uss_right = Ultrasonic('uss_right',
-                bng,
-                vehicle,
-                requested_update_time=0.06,
-                pos=(-0.95, -0.4, 0.95),
-                dir=(-0.6, 0.4, 0),
-                field_of_view_y=60,
-                near_far_planes=(0.1, 3.0), 
-                range_min_cutoff=0.1, 
-                range_direct_max_cutoff=3.0,
-                sensitivity=0.01, 
-                is_visualised=False,
-                is_streaming=True)
+            vectors = lidar_data - np.array([0, 0, 0])
+            lidar_data = lidar_data[np.dot(vectors, direction) >= 0]
 
-electrics = Electrics()
-vehicle.attach_sensor('electrics', electrics)
-electrics.attach(vehicle, 'electrics')
-electrics.connect(bng, vehicle)
+            np.savetxt(f'{curr_dir}/sample{i}/lidar/pc{j}.txt', lidar_data, delimiter=' ')
 
-timer = Timer()
-vehicle.attach_sensor('timer', timer)
-timer.attach(vehicle, 'timer')
-timer.connect(bng, vehicle)
+            if j % 3 == 0:
+                camera_data = camera.stream_colour(3686400)
+                camera_data = np.array(camera_data).reshape(height, width, 4)
+                camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+                Image.fromarray(camera_data, 'L').save(f'{curr_dir}/sample{i}/cam/img{j}.png', "PNG")
 
-vehicle.ai_set_speed(22, 'limit')
-vehicle.ai_drive_in_lane(True)
-vehicle.ai_set_mode('span')
+            bng.resume()
 
-bng.spawn_traffic()
+# vehicle.sensors.poll('electrics')
+# while(electrics.data['running']):
+#     time.sleep(10)
+#     vehicle.control(brake=0.6)
+#     vehicle.sensors.poll('electrics')
 
 # try:
 #     OpenDriveExporter.compute_roads_and_junctions()
 # except Exception as e:
 #     pass
 # OpenDriveExporter.export('road_network', bng)
-time.sleep(60)
-for i in range(0, 5):
-    time.sleep(60)
-    for j in range(0, 15):
-        bng.pause()
-        vehicle.sensors.poll('state')
-        lidar_data_readonly = lidar.stream()
-        pos = np.array(vehicle.state['pos'])
-
-        lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
-        lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
-
-        transform = np.identity(4)
-        transform[:3, 3] = -pos
-
-        lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
-        lidar_data = np.dot(lidar_data, transform.T)[:, :3]
-
-        np.savetxt('sp1/sample' + str(i) + '/lidar/pc' + str(j) + '.txt', lidar_data, delimiter=' ')
-
-        if j % 3 == 0:
-            camera_data = camera.stream_colour(3686400)
-            camera_data = np.array(camera_data).reshape(height, width, 4)
-            camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
-            Image.fromarray(camera_data, 'L').save('sp1/sample' + str(i) + '/cam/img' + str(j) + '.png', "PNG")
-
-        bng.resume()
-
-# input('Hit enter to start camera')
-# time.sleep(120)
-# for i in range(0, 60, 1):
-#     if i % 2 == 0:
-#         bng.pause()
-#         camera_data = camera.stream_colour(3686400)
-#         camera_data = np.array(camera_data).reshape(height, width, 4)
-#         camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
-#         Image.fromarray(camera_data, 'L').save('img' + str(i//2) + '.png', "PNG")
-#         bng.resume()
-#     else:
-#         vehicle.sensors.poll('timer')
-#         print(timer.data['time'])
 
 # time.sleep(5)
 # print('braking')
@@ -330,22 +166,4 @@ for i in range(0, 5):
 # ser.write(len(img).to_bytes(4) + img)
 # stream.close()
 
-camera.remove()
-lidar_file.close()
-lidar.remove()
-uss_f.remove()
-uss_fl.remove()
-uss_fr.remove()
-uss_r.remove()
-uss_rl.remove()
-uss_rr.remove()
-uss_left.remove()
-uss_right.remove()
-vehicle.detach_sensor('electrics')
-electrics.detach(vehicle, 'electrics')
-electrics.disconnect(bng, vehicle)
-vehicle.detach_sensor('timer')
-timer.detach(vehicle, 'timer')
-timer.disconnect(bng, vehicle)
-bng.close()
-home.close()
+host.destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer)
