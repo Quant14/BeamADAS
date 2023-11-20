@@ -1,33 +1,34 @@
 import socket
 import struct
-import numpy as np
 
-def send_data(socket, data):
-    socket.sendall(struct.pack('>I', len(data)) + data)
+class Comm:
+    def __init__(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket.bind(("0.0.0.0", 4444))
+        self.socket.listen()
 
-def recv_data(socket):
-    data_len = socket.recv(4)
-    if not data_len: return None
-
-    data_len = struct.unpack('>I', data_len)[0]
-    return socket.recv(data_len)
-
-host_ip = "0.0.0.0"
-host_port = 4444
-
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket:
-    socket.bind((host_ip, host_port))
-    socket.listen()
-
-    print('Waiting for connection...')
-    conn, addr = socket.accept()
-
-    with conn:
+        print('Waiting for connection...')
+        self.conn, self.addr = self.socket.accept()
         print("Connected")
 
-        data = recv_data(conn)
-        if data != None:
-            data = data.decode('utf-8')
-        print(data)
+    def send_data(self, data):
+        self.conn.sendall(struct.pack('>I', len(data)) + data)
 
-        send_data(conn, b'Hello back')
+    def recv_data(self):
+        data_len = self.conn.recv(4)
+        if not data_len: return None
+
+        data_len = struct.unpack('>I', data_len)[0]
+        read_len = 0
+        data = b''
+
+        while data_len > read_len:
+            data += self.conn.recv(data_len - read_len)
+            read_len = len(data)
+            
+        return data
+
+    def close(self):
+        self.conn.close()
+        self.socket.close()        

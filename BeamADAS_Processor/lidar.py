@@ -1,27 +1,29 @@
-import socket
+import cv2
 import numpy as np
-import comm
 import time
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import DBSCAN
 
-host_ip = "0.0.0.0"
-host_port = 4444
+import comm
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket:
-    socket.bind((host_ip, host_port))
-    socket.listen()
+socket = comm.Comm()
 
-    print('Waiting for connection...')
-    conn, addr = socket.accept()
+try:
+    data = socket.recv_data()
+    if data == None: exit()
+    # data = np.frombuffer(data, dtype=np.float32).reshape((800, 3))
+    # print(data)
+    # with open('socket.png', 'wb') as file:
+    #     file.write(data)
 
-    with conn:
-        print("Connected")
-        lidar_data = comm.recv_data(conn)
+    socket.send_data(b'')
+except Exception as e:
+    print(e)
+finally:
+    socket.close()
 
-        lidar_data = np.frombuffer(lidar_data, dtype=np.float_).reshape(2400, 3)
-
+exit()
 # print('a')
 # size = struct.unpack('H', ser.read(2))[0]
 # print('b')
