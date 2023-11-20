@@ -1,22 +1,26 @@
-import serial
+import socket
 import numpy as np
-import struct
+import comm
 import time
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import DBSCAN
 
-# ser = serial.Serial('/dev/ttyS0', baudrate=115200)
+host_ip = "0.0.0.0"
+host_port = 4444
 
-# # Check communication
-# print('Waiting for connection...')
-# # ser.timeout = 60
-# if ser.readline() == b'Pi check connection\n':
-#     # ser.timeout = 5
-#     ser.write(b'Host check connection\n')
-#     if ser.readline() == b'OK\n':
-#         print('OK')
-#         # ser.timeout = None
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket:
+    socket.bind((host_ip, host_port))
+    socket.listen()
+
+    print('Waiting for connection...')
+    conn, addr = socket.accept()
+
+    with conn:
+        print("Connected")
+        lidar_data = comm.recv_data(conn)
+
+        lidar_data = np.frombuffer(lidar_data, dtype=np.float_).reshape(2400, 3)
 
 # print('a')
 # size = struct.unpack('H', ser.read(2))[0]
@@ -59,13 +63,15 @@ def find_clusters(lidar_data):
         closest_point = cluster_points[min_distance_idx[0]]
         distance = np.linalg.norm(closest_point)
 
-        print(f"Segment {j}, Cluster {cluster_id}: Closest point {closest_point}, Distance: {distance} meters")
+        # print(f"Segment {j}, Cluster {cluster_id}: Closest point {closest_point}, Distance: {distance} meters")
 
 for j in range(0, 5):
     print(j * 3)
     path = f'sp2/sample2/lidar/pc{j * 3}.txt'
     lidar_data = np.genfromtxt(path, delimiter=' ')
+    t = time.time()
     find_clusters(lidar_data)
+    print(time.time() - t)
     # lidar_data_original = lidar_data # Plotting
 
     # Plotting

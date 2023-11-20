@@ -1,17 +1,33 @@
-import serial
+import socket
+import struct
+import numpy as np
 
-ser = serial.Serial('/dev/ttyS0', baudrate=115200)
+def send_data(socket, data):
+    socket.sendall(struct.pack('>I', len(data)) + data)
 
-# Check communication
-print('Waiting for connection...')
-ser.timeout = 60
-if ser.readline() == b'Pi check connection\n':
-    ser.timeout = 1
-    ser.write(b'Host check connection\n')
-    if ser.readline() == b'OK\n':
-        print('OK')
-        ser.timeout = None
+def recv_data(socket):
+    data_len = socket.recv(4)
+    if not data_len: return None
 
-# Do work
+    data_len = struct.unpack('>I', data_len)[0]
+    return socket.recv(data_len)
 
-ser.close()
+host_ip = "0.0.0.0"
+host_port = 4444
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket:
+    socket.bind((host_ip, host_port))
+    socket.listen()
+
+    print('Waiting for connection...')
+    conn, addr = socket.accept()
+
+    with conn:
+        print("Connected")
+
+        data = recv_data(conn)
+        if data != None:
+            data = data.decode('utf-8')
+        print(data)
+
+        send_data(conn, b'Hello back')
