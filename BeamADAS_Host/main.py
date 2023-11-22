@@ -10,10 +10,10 @@ from PIL import Image
 width = 1280
 height = 720
 
-import paramiko
-pi_ip = "fe80::4464:3bc8:5788:fbfb"
-user = "quant"
-passwd = "adas"
+import socket
+# pi_ip = "fe80::4464:3bc8:5788:fbfb"
+pi_ip = "169.254.151.166"
+pi_port = 4444
 
 adas_state = 0 # states: 0 = off, 1 = on, 2 = ready, 3 = active
 
@@ -28,16 +28,23 @@ second = 0
 
 # Check connection with Pi4 to set adas_state to ready
 print('Connecting to Pi4...')
-lidar_data = np.genfromtxt('sp1/sample1/lidar/pc0.txt')
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(pi_ip, username=user, password=passwd)
-stdin, stdout, stderr = ssh.exec_command("echo Initialize")
-stdin.write(lidar_data.tobytes())
-stdin.channel.shutdown_write()
-ssh.close()
+lidar_data = np.genfromtxt('sp1/sample1/lidar/pc0.txt', dtype=np.float32)
+# img = open('sp1/sample1/cam/img0.png', 'rb').read()
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket:
+    socket.connect((pi_ip, pi_port))
+
+    t1 = time.time()
+    host.send_data(socket, lidar_data.tobytes())
+
+    data = host.recv_data(socket)
+    if data == None:
+        exit()
+
+    print(time.time() - t1)
+    print(data)
+
 exit()
-print('a')
 while(electrics.data['running']):
     bng.pause()
 

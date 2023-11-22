@@ -166,4 +166,16 @@ for curr_dir in dirs:
 # ser.write(len(img).to_bytes(4) + img)
 # stream.close()
 
+# SSH testing
+# ssh = paramiko.SSHClient()
+# ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+# ssh.connect(pi_ip, username=user, password=passwd)
+# stdin, stdout, stderr = ssh.exec_command("python3.11 BeamADAS/BeamADAS_Processor/comm.py")
+# t1 = time.time()
+# stdin.write(lidar_data.tobytes())
+# stdin.channel.shutdown_write()
+# print(stderr.read())
+# print(time.time() - t1)
+# ssh.close()
+
 host.destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer)

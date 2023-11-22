@@ -1,7 +1,8 @@
 # This file includes the host init and destroy code for a cleaner main file
 
 import os
-# import pyserial
+import socket
+import struct
 
 from beamngpy import BeamNGpy, Scenario, Vehicle
 from beamngpy.sensors import Camera, Lidar, Ultrasonic, Electrics, Timer
@@ -215,3 +216,20 @@ def destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, 
     timer.disconnect(bng, vehicle)
     bng.close()
     home.close()
+
+def send_data(socket, data):
+    socket.sendall(struct.pack('>I', len(data)) + data)
+
+def recv_data(socket):
+    data_len = socket.recv(4)
+    if not data_len: return None
+
+    data_len = struct.unpack('>I', data_len)[0]
+    read_len = 0
+    data = b''
+
+    while data_len > read_len:
+        data += socket.recv(data_len - read_len)
+        read_len = len(data)
+
+    return data
