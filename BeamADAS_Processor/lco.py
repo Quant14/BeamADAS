@@ -260,9 +260,9 @@ class LaneCurve:
     # offset = measure_pos(binary_birdeye_2, left_fit, right_fit)
     # print('Offset: ' + str(offset))
 
-    def lane_pipeline(self, img, i):
+    def lane_pipeline(self, img):
         binary = self.binary_threshold(img)
-        binary_birdeye, M_inv = self.birdeye_view(binary)
+        binary_birdeye, _ = self.birdeye_view(binary)
         weight = 0
 
         if (len(self.left_fit_hist) == 0):
@@ -294,8 +294,8 @@ class LaneCurve:
                 self.right_fit_hist = np.delete(self.right_fit_hist, 0,0)
                    
         # DEBUG - remove for max performance
-        a = self.draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)            
-        plt.imsave('./BeamADAS_Processor/cam_res/proc_img' + str(i) + '.png', a)
+        # a = self.draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)            
+        # plt.imsave('./BeamADAS_Processor/cam_res/proc_img' + str(i) + '.png', a)
         # ----------------------------------
         
         left_rad, right_rad =  self.measure_curvature(left_fitx, right_fitx, ploty)

@@ -1,34 +1,45 @@
 import comm
+from lco import LaneCurve
 
+import cv2
 import numpy as np
 import multiprocessing as mp
 import time
 
-def main_process(cam, cam_event, lidar, lidar_event):
+def main_process(cam, cam_size, cam_event, lidar, lidar_event):
     socket = comm.Comm()
     try:
         while True:
-            socket.recv_data()
+            data_type, data_len, data = socket.recv_data()
 
+            if data_type != None:
+                if data_type == 'C':
+                    with cam.get_lock():
+                        cam[:data_len] = data
+                        cam_size.Value = data_len
+                    cam_event.set()
             with lidar.get_lock():
                 lidar[:] = np.random.rand(2400)
                 print(f'main: {lidar[:]}')
             lidar_event.set()
 
-
-
-            with cam.get_lock():
-                cam[:len()]
-            time.sleep(3)
     except Exception as e:
         print(e)
     finally:
         socket.close()
 
-def cam_process(cam, cam_event):
+def cam_process(cam, size, event):
+    lc = LaneCurve()
     while True:
-        print('cam')
+        event.wait()
+        event.clear()
 
+        with cam.get_lock():
+            img = np.frombuffer(cam, dtype=np.uint8, count=size.Value)
+            img = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
+
+        radius, pos = lc.lane_pipeline(img)
+        print(radius, pos)
 def lidar_process(lidar, lidar_event):
     for i in range(0, 4):
         lidar_event.wait()
@@ -46,7 +57,7 @@ def main():
         lidar = mp.Array('f', 2400, lock=True)
         lidar_event = mp.Event()
 
-        main_proc = mp.Process(target=main_process, args=(cam, cam_event, lidar, lidar_event))
+        main_proc = mp.Process(target=main_process, args=(cam, cam_size, cam_event, lidar, lidar_event))
         cam_proc = mp.Process(target=cam_process, args=(cam, cam_size, cam_event))
         lidar_proc = mp.Process(target=lidar_process, args=(lidar, lidar_event))
 

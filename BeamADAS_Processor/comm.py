@@ -12,14 +12,14 @@ class Comm:
         self.conn, self.addr = self.socket.accept()
         print("Connected")
 
-    def send_data(self, data):
-        self.conn.sendall(struct.pack('>I', len(data)) + data)
+    def send_data(self, type, data):
+        self.conn.sendall(struct.pack('>BI', type, len(data)) + data)
 
     def recv_data(self):
-        data_len = self.conn.recv(4)
-        if not data_len: return None
+        data_len = self.conn.recv(5)
+        if len(data_len) < 5: return None, None, None
 
-        data_len = struct.unpack('>I', data_len)[0]
+        data_type, data_len = struct.unpack('>BI', data_len)
         read_len = 0
         data = b''
 
@@ -27,7 +27,7 @@ class Comm:
             data += self.conn.recv(data_len - read_len)
             read_len = len(data)
             
-        return data
+        return data_type, data_len, data
 
     def close(self):
         self.conn.close()
