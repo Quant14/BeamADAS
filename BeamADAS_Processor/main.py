@@ -18,6 +18,8 @@ def main_process(cam, cam_size, cam_event, lidar, lidar_event):
                         cam[:data_len] = data
                         cam_size.Value = data_len
                     cam_event.set()
+                elif data_type == 'Q':
+                    
             with lidar.get_lock():
                 lidar[:] = np.random.rand(2400)
                 print(f'main: {lidar[:]}')
@@ -41,7 +43,7 @@ def cam_process(cam, size, event):
         radius, pos = lc.lane_pipeline(img)
         print(radius, pos)
 def lidar_process(lidar, lidar_event):
-    for i in range(0, 4):
+    while True:
         lidar_event.wait()
         with lidar.get_lock():
             curr_data = np.frombuffer(lidar.get_obj(), dtype=np.float32).reshape(800, 3)
@@ -56,6 +58,8 @@ def main():
 
         lidar = mp.Array('f', 2400, lock=True)
         lidar_event = mp.Event()
+
+        quit_event = mp.Event()
 
         main_proc = mp.Process(target=main_process, args=(cam, cam_size, cam_event, lidar, lidar_event))
         cam_proc = mp.Process(target=cam_process, args=(cam, cam_size, cam_event))
@@ -74,5 +78,5 @@ def main():
         print('done')
 
 if __name__ == '__main__':
-    mp.freeze_support() # Remove for Linux later builds
+    mp.freeze_support() # Remove for Raspberry
     main()
