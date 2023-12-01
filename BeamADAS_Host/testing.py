@@ -166,7 +166,7 @@ for curr_dir in dirs:
 # ser.write(len(img).to_bytes(4) + img)
 # stream.close()
 
-# SSH testing
+# SSH testing - 500ms overhead
 # ssh = paramiko.SSHClient()
 # ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 # ssh.connect(pi_ip, username=user, password=passwd)

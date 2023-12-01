@@ -217,19 +217,19 @@ def destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, 
     bng.close()
     home.close()
 
-def send_data(socket, data):
-    socket.sendall(struct.pack('>I', len(data)) + data)
+def send_data(socket, type, data):
+        socket.sendall(struct.pack('>BI', type, len(data)) + data)
 
 def recv_data(socket):
-    data_len = socket.recv(4)
-    if not data_len: return None
+    data_len = socket.recv(5)
+    if len(data_len) < 5: return None, None, None
 
-    data_len = struct.unpack('>I', data_len)[0]
+    data_type, data_len = struct.unpack('>BI', data_len)
     read_len = 0
     data = b''
 
     while data_len > read_len:
-        data += socket.recv(data_len - read_len)
+        data += self.conn.recv(data_len - read_len)
         read_len = len(data)
-
-    return data
+        
+    return data_type, data_len, data
