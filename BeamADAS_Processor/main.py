@@ -6,8 +6,8 @@ import numpy as np
 import multiprocessing as mp
 import time
 
-def main_process(cam, cam_size, cam_event, lidar, lidar_event):
-    socket = comm.Comm()
+def main_process(init_event, cam, cam_size, cam_event, lidar, lidar_event):
+    socket = comm.Comm(0)
     try:
         while True:
             data_type, data_len, data = socket.recv_data()
@@ -18,20 +18,24 @@ def main_process(cam, cam_size, cam_event, lidar, lidar_event):
                         cam[:data_len] = data
                         cam_size.Value = data_len
                     cam_event.set()
+                elif data_type == 'L':
+                    with lidar.get_lock():
+                        lidar[:] = data
+                    lidar_event.set()
+                elif data_type == 'I':
+                    init_event.set()
                 elif data_type == 'Q':
-                    
-            with lidar.get_lock():
-                lidar[:] = np.random.rand(2400)
-                print(f'main: {lidar[:]}')
-            lidar_event.set()
+                    print('quit')        
 
     except Exception as e:
         print(e)
     finally:
         socket.close()
 
-def cam_process(cam, size, event):
+def cam_process(init_event, cam, size, event):
+    init_event.wait()
     lc = LaneCurve()
+    socket = comm.Comm(1)
     while True:
         event.wait()
         event.clear()
@@ -43,6 +47,8 @@ def cam_process(cam, size, event):
         radius, pos = lc.lane_pipeline(img)
         print(radius, pos)
 def lidar_process(lidar, lidar_event):
+    init_event.wait()
+    socket = comm.Comm(2)
     while True:
         lidar_event.wait()
         with lidar.get_lock():
@@ -59,11 +65,12 @@ def main():
         lidar = mp.Array('f', 2400, lock=True)
         lidar_event = mp.Event()
 
+        init_event = mp.Event()
         quit_event = mp.Event()
 
-        main_proc = mp.Process(target=main_process, args=(cam, cam_size, cam_event, lidar, lidar_event))
-        cam_proc = mp.Process(target=cam_process, args=(cam, cam_size, cam_event))
-        lidar_proc = mp.Process(target=lidar_process, args=(lidar, lidar_event))
+        main_proc = mp.Process(target=main_process, args=(init_event, cam, cam_size, cam_event, lidar, lidar_event))
+        cam_proc = mp.Process(target=cam_process, args=(init_event, cam, cam_size, cam_event))
+        lidar_proc = mp.Process(target=lidar_process, args=(init_event, lidar, lidar_event))
 
         main_proc.start()
         cam_proc.start()
