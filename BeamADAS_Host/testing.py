@@ -17,49 +17,58 @@ from beamngpy.sensors import Camera, Lidar, Ultrasonic, Electrics, Timer
 from beamngpy.tools import OpenDriveExporter
 
 # dirs = ['sp1', 'sp1_no_traffic', 'sp2', 'sp2_no_traffic']
-dirs = ['sp2_no_traffic']
+# dirs = ['sp2_no_traffic']
 
-for curr_dir in dirs:
-    home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init(curr_dir, len(curr_dir) == 3)
+home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp0', False, True)
+t = time.time()
+vehicle.sensors.poll('electrics', 'timer', 'state')
+print(time.time() - t)
+t = time.time()
+vehicle.sensors.poll('electrics')
+vehicle.sensors.poll('timer')
+vehicle.sensors.poll('state')
+print(time.time() - t)
+# for curr_dir in dirs:
+#     home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init(curr_dir, len(curr_dir) == 3)
 
-    # input('Hit enter to start camera')
-    # camera_data = camera.stream_colour(3686400)
-    # camera_data = np.array(camera_data).reshape(height, width, 4)
-    # camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
-    # Image.fromarray(camera_data, 'L').save('calibration.png', "PNG")
-    # break
+#     # input('Hit enter to start camera')
+#     # camera_data = camera.stream_colour(3686400)
+#     # camera_data = np.array(camera_data).reshape(height, width, 4)
+#     # camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+#     # Image.fromarray(camera_data, 'L').save('calibration.png', "PNG")
+#     # break
 
-    time.sleep(60)
-    for i in range(0, 5):
-        time.sleep(60)
-        for j in range(0, 15):
-            bng.pause()
-            vehicle.sensors.poll('state')
-            lidar_data_readonly = lidar.stream()
-            pos = np.array([vehicle.state['pos'][0], vehicle.state['pos'][1] - 2.25, vehicle.state['pos'][2] + 0.6])
-            direction = vehicle.state['dir']
+#     time.sleep(60)
+#     for i in range(0, 5):
+#         time.sleep(60)
+#         for j in range(0, 15):
+#             bng.pause()
+#             vehicle.sensors.poll('state')
+#             lidar_data_readonly = lidar.stream()
+#             pos = np.array([vehicle.state['pos'][0], vehicle.state['pos'][1] - 2.25, vehicle.state['pos'][2] + 0.6])
+#             direction = vehicle.state['dir']
 
-            lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
-            lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
+#             lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
+#             lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
 
-            transform = np.identity(4)
-            transform[:3, 3] = -pos
+#             transform = np.identity(4)
+#             transform[:3, 3] = -pos
 
-            lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
-            lidar_data = np.dot(lidar_data, transform.T)[:, :3]
+#             lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
+#             lidar_data = np.dot(lidar_data, transform.T)[:, :3]
 
-            vectors = lidar_data - np.array([0, 0, 0])
-            lidar_data = lidar_data[np.dot(vectors, direction) >= 0]
+#             vectors = lidar_data - np.array([0, 0, 0])
+#             lidar_data = lidar_data[np.dot(vectors, direction) >= 0]
 
-            np.savetxt(f'{curr_dir}/sample{i}/lidar/pc{j}.txt', lidar_data, delimiter=' ')
+#             np.savetxt(f'{curr_dir}/sample{i}/lidar/pc{j}.txt', lidar_data, delimiter=' ')
 
-            if j % 3 == 0:
-                camera_data = camera.stream_colour(3686400)
-                camera_data = np.array(camera_data).reshape(height, width, 4)
-                camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
-                Image.fromarray(camera_data, 'L').save(f'{curr_dir}/sample{i}/cam/img{j}.png', "PNG")
+#             if j % 3 == 0:
+#                 camera_data = camera.stream_colour(3686400)
+#                 camera_data = np.array(camera_data).reshape(height, width, 4)
+#                 camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+#                 Image.fromarray(camera_data, 'L').save(f'{curr_dir}/sample{i}/cam/img{j}.png', "PNG")
 
-            bng.resume()
+#             bng.resume()
 
 # vehicle.sensors.poll('electrics')
 # while(electrics.data['running']):

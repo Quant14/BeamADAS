@@ -198,10 +198,6 @@ def init(sp, traffic, launch):
 
     return home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer
 
-def is_elapsed(timer, vehicle, timestamp):
-    vehicle.sensors.poll('timer')
-    return timer.data['time'] - timestamp >= 0.06
-
 def destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer):
     camera.remove()
     lidar.remove()

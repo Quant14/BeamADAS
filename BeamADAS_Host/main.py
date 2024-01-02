@@ -21,8 +21,7 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, exit_event):
     print('Initializing simulation...')
     adas_state = 1
 
-    vehicle.sensors.poll('electrics', 'timer', 'state')
-    speed = electrics.data['wheelspeed']
+    vehicle.sensors.poll('electrics')
     second = 0
 
     print('Starting receiver...')
@@ -48,8 +47,10 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, exit_event):
             bng.pause()
 
             # Update misc data
-            vehicle.sensors.poll('electrics', 'timer', 'state')
+            vehicle.sensors.poll('electrics')
             speed = electrics.data['wheelspeed']
+
+            host.send(socket, b'S', speed)            
 
             # Get ADAS sensors data
             if speed >= 8.333: # Speed for LiDAR
@@ -69,7 +70,7 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, exit_event):
                 vectors = lidar_data - np.array([0, 0, 0])
                 lidar_data = lidar_data[np.dot(vectors, direction) >= 0]
 
-                host.send(socket, lidar_data.tobytes())
+                host.send(socket, b'L', lidar_data.tobytes())
 
                 if speed >= 11.111 and second % 3 == 0: # Speed for camera
                     camera_data = camera.stream_colour(3686400)
@@ -80,15 +81,17 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, exit_event):
                     camera_data.save('cam.png', 'PNG')
                     img = open('cam.png', 'rb').read()
 
-                    host.send(socket, img)
+                    host.send(socket, b'C', img)
 
             elif speed <= 3.333 and second % 3 == 0: # Parking speed
                 park_data = [uss_f.stream(), uss_fl.stream(), uss_fr.stream(), 
                             uss_r.stream(), uss_rl.stream(), uss_rr.stream()]
+                host.send(socket, b'P', park_data)
 
             # Blind spot detection
             if second % 3 == 0:
                 blind_data = [uss_left.stream(), uss_right.stream()]
+                host.send(socket, b'B', blind_data)
 
             bng.resume()
             second += 1
