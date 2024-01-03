@@ -1,7 +1,9 @@
-import numpy
+# import numpy
 
 def speed_control(dist, speed, target):
-    if target <= speed:
-        if dist == 0:
-            dist = 0.0001
-        return 0, 100 * (target * target - speed * speed) / (2 * dist)
+    if speed > target:
+        if dist < 1:
+            dist = 1
+        return 0, ((speed * speed - target * target) / (2 * dist)) / 100 % 1
+    else:
+        return 100, 0

@@ -20,18 +20,26 @@ class Comm:
         self.socket.sendall(struct.pack('>BI', type, len(data)) + data)
 
     def recv_data(self):
-        data_len = self.conn.recv(5)
-        if len(data_len) < 5: return None, None, None
+        recv = self.conn.recv(9)
+        if len(recv) < 9: return None, None, None, None, None
 
-        data_type, data_len = struct.unpack('>BI', data_len)
+        data_type, data_len, timestamp = struct.unpack('>BIf', recv)
         read_len = 0
         data = b''
+
+        veh_dir = None
+
+        if data_type == 'L':
+            recv = self.conn.recv(8)
+            if len(recv) == 8:
+                veh_dir = [0.0, 0.0]
+                veh_dir[0], veh_dir[1] = struct.unpack('>ff', recv)
 
         while data_len > read_len:
             data += self.conn.recv(data_len - read_len)
             read_len = len(data)
             
-        return data_type, data_len, data
+        return data_type, data_len, timestamp, veh_dir, data
 
     def close(self):
         self.conn.close()
