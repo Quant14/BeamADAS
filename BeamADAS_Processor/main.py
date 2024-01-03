@@ -12,11 +12,11 @@ import struct
 # THINK OF WAY TO TRIGGER FINAL ADAS SIGNAL 100 THROTTLE 0 BRAKE
 
 # MAIN PROCESS ---------------------------------
-def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, lidar_event):
+def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, veh_dir, lidar_event):
     socket = comm.Comm(0)
     try:
         while True:
-            data_type, data_len, timestamp, veh_dir, data = socket.recv_data()
+            data_type, data_len, timestamp, direction, data = socket.recv_data()
 
             if data_type != None and data != None:
                 if data_type == 'S':
@@ -29,6 +29,7 @@ def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar,
                     cam_event.set()
                 elif data_type == 'L':
                     with lidar.get_lock():
+                        veh_dir[:] = direction
                         lidar[:] = data
                     lidar_event.set()
                 elif data_type == 'I':
@@ -74,7 +75,7 @@ def cam_process(init_event, quit_event, speed, cam, size, event, cam_last_brake,
         socket.close()
 
 # LIDAR PROCESS --------------------------------
-def lidar_process(init_event, quit_event, speed, lidar, lidar_event, cam_last_brake, lidar_last_brake):
+def lidar_process(init_event, quit_event, speed, lidar, veh_dir, lidar_event, cam_last_brake, lidar_last_brake):
     init_event.wait()
     socket = comm.Comm(2)
     try:
@@ -111,11 +112,12 @@ def main():
         speed = mp.Value('f', 0.0, lock=True)
 
         cam = mp.Array('B', 1048576, lock=True)
-        cam_size = mp.Value('I', 0, lock=False)
+        cam_size = mp.Value('I', 0)
         cam_event = mp.Event()
         cam_last_brake = mp.Value('f', 0.0, lock=True)
 
         lidar = mp.Array('f', 2400, lock=True)
+        veh_dir = mp.Array('f', 2)
         lidar_event = mp.Event()
         lidar_last_brake = mp.Value('f', 0.0, lock=True)
 
@@ -125,9 +127,9 @@ def main():
         init_event = mp.Event()
         quit_event = mp.Event()
 
-        main_proc = mp.Process(target=main_process, args=(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, lidar_event, uss, uss_event))
+        main_proc = mp.Process(target=main_process, args=(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, veh_dir, lidar_event, uss, uss_event))
         cam_proc = mp.Process(target=cam_process, args=(init_event, quit_event, speed, cam, cam_size, cam_event, cam_last_brake, lidar_last_brake))
-        lidar_proc = mp.Process(target=lidar_process, args=(init_event, quit_event, speed, lidar, lidar_event, cam_last_brake, lidar_last_brake))
+        lidar_proc = mp.Process(target=lidar_process, args=(init_event, quit_event, speed, lidar, veh_dir, lidar_event, cam_last_brake, lidar_last_brake))
 
         main_proc.start()
         cam_proc.start()
