@@ -1,9 +1,10 @@
-import cv2
+# import cv2
 import numpy as np
-import time
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+# import time
+# import matplotlib.pyplot as plt
+# from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import DBSCAN
+from scipy.optimize import linear_sum_assignment
 
 # import comm
 
@@ -34,8 +35,8 @@ from sklearn.cluster import DBSCAN
 
 class ObjectDetect:
     def __init__(self):
-        self.lidar_data_prev = None
-        self.cluster_data_prev = None
+        self.cluster_data_prev = np.array([])
+        self.centroids_prev = np.array([])
         self.timestamp_prev = 0.0
 
     def find_clusters(self, lidar_data):
@@ -61,7 +62,8 @@ class ObjectDetect:
                 clusters = dbscan.fit_predict(segment_data)
                 for cluster_id in np.unique(clusters[clusters != -1]):
                     cluster_points = segment_data[clusters == cluster_id]
-                    cluster_data.append((i, cluster_id, cluster_points))
+                    # cluster_data.append((i, cluster_id, cluster_points)) # Segment, id, points
+                    cluster_data.append((i, cluster_points)) # Segment and points
 
                 lidar_data = lidar_data[np.logical_not(segment_criteria)]
 
@@ -69,8 +71,40 @@ class ObjectDetect:
 
         return cluster_data
 
-    def match_clusters(self, cluster_data):
+    def match_and_track(self, cluster_data, elapsed, speed_vect):
+        centroids = np.mean(cluster_data, axis=1)
+
+        predicted_centroids = self.centroids_prev + elapsed * speed_vect
+
+        # ADD CYCLE THAT SEARCHES ALONG PATH
+
+        distances = np.linalg.norm(predicted_centroids[:, np.newaxis, :] - centroids, axis=2)
+
+        row_ind, col_ind = linear_sum_assignment(distances <= 2.0)
+        matched_clusters = np.column_stack((row_ind, col_ind))
+
+        # FIRST FIND ANY OTHER MATCHES ON PATH
+
+
+        matched_info = []
+
+        for i, j in matched_clusters:
+            prev_cluster = self.cluster_data_prev[i]
+            curr_cluster = cluster_data[j]
+
+            distance = distances[i, j]
+
+
         
+    def lidar_pipeline(self, lidar_data, timestamp, speed_vect):
+        cluster_data = self.find_clusters(lidar_data)
+
+        if self.cluster_data_prev != None:
+            self.match_and_track(cluster_data, timestamp - self.timestamp_prev, speed_vect)
+
+        self.cluster_data_prev = cluster_data
+        self.centroids_prev = np.mean(cluster_data, axis=1)
+        self.timestamp_prev = timestamp
 
     def analyze_clusters(self, cluster_data):
         clusters_info = []
