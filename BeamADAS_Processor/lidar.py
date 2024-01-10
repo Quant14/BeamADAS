@@ -1,7 +1,7 @@
 # import cv2
 import numpy as np
-# import time
-# import matplotlib.pyplot as plt
+import time
+import matplotlib.pyplot as plt
 # from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import DBSCAN
 from scipy.optimize import linear_sum_assignment
@@ -62,8 +62,8 @@ class ObjectDetect:
                 clusters = dbscan.fit_predict(segment_data)
                 for cluster_id in np.unique(clusters[clusters != -1]):
                     cluster_points = segment_data[clusters == cluster_id]
-                    # cluster_data.append((i, cluster_id, cluster_points)) # Segment, id, points
-                    cluster_data.append((i, cluster_points)) # Segment and points
+                    cluster_data.append((i, cluster_id, cluster_points)) # Segment, id, points
+                    # cluster_data.append(cluster_points) # Segment and points
 
                 lidar_data = lidar_data[np.logical_not(segment_criteria)]
 
@@ -71,36 +71,40 @@ class ObjectDetect:
 
         return cluster_data
 
-    def match_and_track(self, cluster_data, elapsed, speed_vect):
+    def match_and_track(self, cluster_data, elapsed, speed, dir):
         centroids = np.mean(cluster_data, axis=1)
 
-        predicted_centroids = self.centroids_prev + elapsed * speed_vect
+        thresh = elapsed * speed * 2
 
-        # ADD CYCLE THAT SEARCHES ALONG PATH
+        distances = np.linalg.norm(self.centroids_prev[:, np.newaxis, :] - centroids, axis=2)
 
-        distances = np.linalg.norm(predicted_centroids[:, np.newaxis, :] - centroids, axis=2)
+        # predicted_centroids = self.centroids_prev + elapsed * speed_vect
+        # # ADD CYCLE THAT SEARCHES ALONG PATH
+        # distances = np.linalg.norm(predicted_centroids[:, np.newaxis, :] - centroids, axis=2)
 
         row_ind, col_ind = linear_sum_assignment(distances <= 2.0)
         matched_clusters = np.column_stack((row_ind, col_ind))
 
-        # FIRST FIND ANY OTHER MATCHES ON PATH
-
-
-        matched_info = []
+        matched_info = [] # [[distance, speed, direction], [...], ...]
 
         for i, j in matched_clusters:
-            prev_cluster = self.cluster_data_prev[i]
-            curr_cluster = cluster_data[j]
+            prev_cluster = self.centroids_prev[i]
+            curr_cluster = centroids[j]
 
-            distance = distances[i, j]
+            movement_vector = prev_cluster - curr_cluster
 
+            matched_info.append([distances[i, j],
+            np.linalg.norm(movement_vector) / elapsed,
+            movement_vector / np.linalg.norm(movement_vector)])
 
+        return matched_info
         
-    def lidar_pipeline(self, lidar_data, timestamp, speed_vect):
+    def lidar_pipeline(self, lidar_data, timestamp, speed, dir):
         cluster_data = self.find_clusters(lidar_data)
 
         if self.cluster_data_prev != None:
-            self.match_and_track(cluster_data, timestamp - self.timestamp_prev, speed_vect)
+            matched_info = self.match_and_track(cluster_data, timestamp - self.timestamp_prev, speed, dir)
+            ...
 
         self.cluster_data_prev = cluster_data
         self.centroids_prev = np.mean(cluster_data, axis=1)
@@ -119,30 +123,30 @@ class ObjectDetect:
 
             print(f"Segment {j}, Cluster {cluster_id}: Closest point {closest_point}, Distance: {distance} meters")
 
-# od = ObjectDetect()
+od = ObjectDetect()
 
-# for j in range(0, 5):
-#     print(j * 3)
-#     path = f'sp2/sample2/lidar/pc{j * 3}.txt'
-#     lidar_data = np.genfromtxt(path, delimiter=' ')
-#     t = time.time()
-#     cluster_data = od.find_clusters(lidar_data)
-#     od.analyze_clusters(cluster_data)
-#     print(time.time() - t)
-#     lidar_data_original = lidar_data # Plotting
+for j in range(0, 5):
+    print(j * 3)
+    path = f'sp2/sample2/lidar/pc{j * 3}.txt'
+    lidar_data = np.genfromtxt(path, delimiter=' ')
+    t = time.time()
+    cluster_data = od.find_clusters(lidar_data)
+    # od.analyze_clusters(cluster_data)
+    print(time.time() - t)
+    lidar_data_original = lidar_data # Plotting
 
-#     # Plotting
-#     x = lidar_data_original[:, 0]
-#     y = lidar_data_original[:, 1]
-#     z = lidar_data_original[:, 2]
+    # Plotting
+    x = lidar_data_original[:, 0]
+    y = lidar_data_original[:, 1]
+    z = lidar_data_original[:, 2]
 
-#     plot = plt.figure().add_subplot(111, projection='3d')
-#     plot.scatter(x, y, z, alpha=0.1)
+    plot = plt.figure().add_subplot(111, projection='3d')
+    plot.scatter(x, y, z, alpha=0.1)
 
-#     for cluster_info in cluster_data:
-#         j, cluster_id, cluster_points = cluster_info
-#         plot.scatter(cluster_points[:, 0], cluster_points[:, 1], cluster_points[:, 2], alpha=1)
+    for cluster_info in cluster_data:
+        j, cluster_id, cluster_points = cluster_info
+        plot.scatter(cluster_points[:, 0], cluster_points[:, 1], cluster_points[:, 2], alpha=1)
 
-#     plot.axis('equal')
-#     plt.show()
+    plot.axis('equal')
+    plt.show()
 # ser.close()
