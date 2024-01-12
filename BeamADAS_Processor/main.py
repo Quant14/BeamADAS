@@ -12,11 +12,11 @@ import struct
 # THINK OF WAY TO TRIGGER FINAL ADAS SIGNAL 100 THROTTLE 0 BRAKE
 
 # MAIN PROCESS ---------------------------------
-def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, veh_dir, lidar_event):
+def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, veh_dir, timestamp, lidar_event):
     socket = comm.Comm(0)
     try:
         while True:
-            data_type, data_len, timestamp, direction, data = socket.recv_data()
+            data_type, data_len, curr_time, direction, data = socket.recv_data()
 
             if data_type != None and data != None:
                 if data_type == 'S':
@@ -29,6 +29,7 @@ def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar,
                     cam_event.set()
                 elif data_type == 'L':
                     with lidar.get_lock():
+                        timestamp.Value = curr_time
                         veh_dir[:] = direction
                         lidar[:] = data
                     lidar_event.set()
@@ -75,14 +76,19 @@ def cam_process(init_event, quit_event, speed, cam, size, event, cam_last_brake,
         socket.close()
 
 # LIDAR PROCESS --------------------------------
-def lidar_process(init_event, quit_event, speed, lidar, veh_dir, lidar_event, cam_last_brake, lidar_last_brake):
+def lidar_process(init_event, quit_event, speed, lidar, veh_dir, timestamp, lidar_event, cam_last_brake, lidar_last_brake):
     init_event.wait()
     socket = comm.Comm(2)
     try:
+        curr_dir = [0.0, 0.0]
+        curr_time = 0.0
+        curr_data = np.array([], dtype=np.float32)
         while not quit_event.is_set():
             lidar_event.wait()
             lidar_event.clear()
             with lidar.get_lock():
+                curr_dir = veh_dir[:]
+                curr_time = timestamp.Value
                 curr_data = np.frombuffer(lidar.get_obj(), dtype=np.float32).reshape(800, 3)
                 print(f'sub: {curr_data}')
 
@@ -91,7 +97,6 @@ def lidar_process(init_event, quit_event, speed, lidar, veh_dir, lidar_event, ca
             # calc distance to target gap to object\
             with speed.get_lock():
                 throttle, brake = speed_control(dist, speed, target)
-
             if brake >= 0.5:
                 with cam_last_brake.get_lock():
                     if cam_last_brake < brake:
@@ -118,6 +123,7 @@ def main():
 
         lidar = mp.Array('f', 2400, lock=True)
         veh_dir = mp.Array('f', 2)
+        timestamp = mp.Value('f', 0.0, lock=True)
         lidar_event = mp.Event()
         lidar_last_brake = mp.Value('f', 0.0, lock=True)
 
@@ -127,9 +133,9 @@ def main():
         init_event = mp.Event()
         quit_event = mp.Event()
 
-        main_proc = mp.Process(target=main_process, args=(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, veh_dir, lidar_event, uss, uss_event))
+        main_proc = mp.Process(target=main_process, args=(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, veh_dir, timestamp, lidar_event, uss, uss_event))
         cam_proc = mp.Process(target=cam_process, args=(init_event, quit_event, speed, cam, cam_size, cam_event, cam_last_brake, lidar_last_brake))
-        lidar_proc = mp.Process(target=lidar_process, args=(init_event, quit_event, speed, lidar, veh_dir, lidar_event, cam_last_brake, lidar_last_brake))
+        lidar_proc = mp.Process(target=lidar_process, args=(init_event, quit_event, speed, lidar, veh_dir, timestamp, lidar_event, cam_last_brake, lidar_last_brake))
 
         main_proc.start()
         cam_proc.start()
