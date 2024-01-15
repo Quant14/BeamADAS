@@ -27,14 +27,18 @@ class Comm:
         read_len = 0
         data = b''
 
-        veh_dir = None
-        timestamp = None
+        veh_dir = [0.0, 0.0]
+        timestamp = 0.0
+
+        if data_type == 'L' or data_type == 'P':
+            recv = self.conn.recv(4)
+            if len(recv) == 4:
+                timestamp = struct.unpack('>f', recv)
 
         if data_type == 'L':
             recv = self.conn.recv(8)
             if len(recv) == 8:
-                veh_dir = [0.0, 0.0]
-                timestamp, veh_dir[0], veh_dir[1] = struct.unpack('>fff', recv)
+                veh_dir[0], veh_dir[1] = struct.unpack('>ff', recv)
 
         while data_len > read_len:
             data += self.conn.recv(data_len - read_len)
