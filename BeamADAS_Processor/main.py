@@ -1,15 +1,13 @@
 import comm
 from lco import LaneCurve
-from sc import speed_control
+from od import ObjectDetect
+import sc
 
 import cv2
 import numpy as np
 import multiprocessing as mp
-import time
 import math
 import struct
-
-# THINK OF WAY TO TRIGGER FINAL ADAS SIGNAL 100 THROTTLE 0 BRAKE
 
 # MAIN PROCESS ---------------------------------
 def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, veh_dir, timestamp, lidar_event):
@@ -61,7 +59,7 @@ def cam_process(init_event, quit_event, speed, cam, size, event, cam_last_brake,
             max_speed = math.sqrt(4.905 * radius) * 3.6
 
             with speed.get_lock():
-                throttle, brake = speed_control(5, speed.Value, max_speed)
+                throttle, brake = sc.cam_speed_control(5, speed.Value, max_speed)
 
             with lidar_last_brake.get_lock():
                 if lidar_last_brake < brake:
@@ -80,9 +78,12 @@ def lidar_process(init_event, quit_event, speed, lidar, veh_dir, timestamp, lida
     init_event.wait()
     socket = comm.Comm(2)
     try:
+        curr_speed = 0.0
         curr_dir = [0.0, 0.0]
         curr_time = 0.0
         curr_data = np.array([], dtype=np.float32)
+        od = ObjectDetect()
+
         while not quit_event.is_set():
             lidar_event.wait()
             lidar_event.clear()
@@ -90,21 +91,27 @@ def lidar_process(init_event, quit_event, speed, lidar, veh_dir, timestamp, lida
                 curr_dir = veh_dir[:]
                 curr_time = timestamp.Value
                 curr_data = np.frombuffer(lidar.get_obj(), dtype=np.float32).reshape(800, 3)
-                print(f'sub: {curr_data}')
-
-            # find important object
-            # calc target speed
-            # calc distance to target gap to object\
+            
             with speed.get_lock():
-                throttle, brake = speed_control(dist, speed, target)
-            if brake >= 0.5:
+                curr_speed = speed.Value
+
+            matched_info, relevant_indices = od.lidar_pipeline(curr_data, curr_time, curr_speed, curr_dir)
+            if relevant_indices != None and matched_info != None:
+                throttle = 0.0
+                brake = 0.0
+                max_brake = 0.0
+                for i in relevant_indices:
+                    dist, sp, pos, dir = matched_info[i]    
+                    throttle, brake = sc.lidar_speed_control(dist, curr_speed, curr_speed - sp)
+                    if brake > max_brake:
+                        max_brake = brake
+
                 with cam_last_brake.get_lock():
                     if cam_last_brake < brake:
                         socket.send_data(b'C', np.array([throttle, brake], dtype=np.float32))
 
                 with lidar_last_brake.get_lock():
                     lidar_last_brake.Value = brake
-            # speed_control() -> don't forget speed lock
 
     except Exception as e:
         print(e)

@@ -299,9 +299,9 @@ class LaneCurve:
         # ----------------------------------
         
         left_rad, right_rad =  self.measure_curvature(left_fitx, right_fitx, ploty)
-        pos = self.measure_pos(binary_birdeye, left_fit, right_fit)
+        # pos = self.measure_pos(binary_birdeye, left_fit, right_fit)
 
         if weight:
-            return right_rad, pos
+            return right_rad
         else:
-            return left_rad, pos
+            return left_rad
