@@ -41,7 +41,7 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, exit_event):
         print('Waiting for lidar receiver...')
         ready_lidar_event.wait()
         print('Initiating data processing...')
-        host.send_data(socket, b'I', b'')
+        host.send_data(socket, 'I', b'')
         print('Simulation running.')
         while(electrics.data['running']):
             bng.pause()
@@ -50,10 +50,11 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, exit_event):
             vehicle.sensors.poll('electrics')
             speed = electrics.data['wheelspeed']
 
-            host.send(socket, b'S', speed)            
+            host.send(socket, 'S', speed)            
 
             # Get ADAS sensors data
             if speed >= 8.333: # Speed for LiDAR
+                vehicle.sensors.poll('state', 'timer')
                 lidar_data_readonly = lidar.stream()
                 pos = np.array([vehicle.state['pos'][0], vehicle.state['pos'][1] - 2.25, vehicle.state['pos'][2] + 0.6])
                 direction = vehicle.state['dir']
@@ -67,12 +68,11 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, exit_event):
                 lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
                 lidar_data = np.dot(lidar_data, transform.T)[:, :3]
 
-                vectors = lidar_data - np.array([0, 0, 0])
-                lidar_data = lidar_data[np.dot(vectors, direction) >= 0]
+                lidar_data = lidar_data[np.dot(lidar_data, direction) >= 0]
 
-                host.send(socket, b'L', lidar_data.tobytes())
+                host.send(socket, 'L', timer['time'], direction[:2], lidar_data.tobytes())
                 
-            if second % 3 == 0:
+            if second % 2 == 0:
                 if speed >= 11.111: # Speed for camera
                     camera_data = camera.stream_colour(3686400)
                     camera_data = np.array(camera_data).reshape(height, width, 4)
@@ -82,25 +82,21 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, exit_event):
                     camera_data.save('cam.png', 'PNG')
                     img = open('cam.png', 'rb').read()
 
-                    host.send(socket, b'C', img)
+                    host.send(socket, 'C', img)
                 elif speed <= 3.333: # Parking speed
+                    vehicle.sensors.poll('electrics', 'timer')
                     park_data = [uss_f.stream(), uss_fl.stream(), uss_fr.stream(), 
                                 uss_r.stream(), uss_rl.stream(), uss_rr.stream()]
-                    host.send(socket, b'P', park_data)
+                    host.send(socket, 'P', timer['time'], electrics.data['gear'], park_data)
                 else: # Blind spot detection
                     blind_data = [uss_left.stream(), uss_right.stream()]
-                    host.send(socket, b'B', blind_data)
+                    host.send(socket, 'B', blind_data)
 
             bng.resume()
             second += 1
 
-            # Receive response from Raspberry Pi
-            # This communication is greatly flawed as the simulation sends data from all sensors and then waits for only one response from all 3-4 responses that will be received
-            # Idea: Use multiprocessing to asynchronously send and receive data
-            # Refinement: At its current implementation the processor sends back all processed data, creating unnecessary traffic
-            # Refinement: Processor should send back only the lowest speed response (if cam sends slowest speed then only cam can send higher speed) and only the blind spot state when different from the last one
             # Note for blind spots: Use hystheresis to filter noise
-            # Free resources
+
     except Exception as e:
         print(e)
     finally:

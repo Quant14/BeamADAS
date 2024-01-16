@@ -218,7 +218,12 @@ def destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, 
     bng.close()
     home.close()
 
-def send_data(socket, type, data):
+def send_data(socket, type, timestamp, dir, gear, data):
+    if type == 'L':
+        socket.sendall(struct.pack('>BIfff', type, len(data), timestamp, dir[0], dir[1]) + data)
+    elif type == 'P':
+        socket.sendall(struct.pack('>BIfB', type, len(data), timestamp, gear) + data)
+    else:
         socket.sendall(struct.pack('>BI', type, len(data)) + data)
 
 def recv_data(socket):
