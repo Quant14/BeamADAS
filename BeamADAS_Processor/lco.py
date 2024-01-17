@@ -4,6 +4,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
+import time
 
 class LaneCurve:
     def __init__(self):
@@ -20,8 +21,8 @@ class LaneCurve:
         # Source points taken from images with straight lane lines
         src = np.array([
             (390, 547), # bottom-left corner
-            (627, 371), # top-left corner
-            (654, 371), # top-right corner
+            (621, 380), # top-left corner
+            (674, 380), # top-right corner
             (903, 547) # bottom-right corner
         ], dtype='f')
         dst = np.array([
@@ -298,7 +299,7 @@ class LaneCurve:
                    
         # DEBUG - remove for max performance
         a = self.draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)   
-        plt.imsave('./BeamADAS_Processor/proc_img.png', a)
+        plt.imsave(f'./BeamADAS_Processor/proc_img{int(time.time())}.png', a)
         # ----------------------------------
         
         left_rad, right_rad =  self.measure_curvature(left_fitx, right_fitx, ploty)

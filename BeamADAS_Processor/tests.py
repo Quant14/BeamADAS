@@ -1,15 +1,15 @@
 import cv2
+import time
 
 from lco import LaneCurve
 
 lc = LaneCurve()
 res = []
 
-radius = lc.lane_pipeline(cv2.imread('./sp1/sample2/cam/img12.png', cv2.IMREAD_GRAYSCALE))
-print('estimated radius: ' + str(radius))
-
-radius = lc.lane_pipeline(cv2.imread('./sp1/sample4/cam/img12.png', cv2.IMREAD_GRAYSCALE))
-print('estimated radius: ' + str(radius))
+for i in range(0, 15, 3):
+    radius = lc.lane_pipeline(cv2.imread(f'./sp1/sample0/cam/img{i}.png', cv2.IMREAD_GRAYSCALE))
+    print('estimated radius: ' + str(radius))
+    time.sleep(1)
     
 # print(time.time())
 # a = 22.677478
