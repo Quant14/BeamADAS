@@ -1,16 +1,15 @@
 import cv2
-# import matplotlib.pyplot as plt
-import time
 
-# from lane_curve_and_offset import LaneCurve
+from lco import LaneCurve
 
-# lc = LaneCurve()
-# res = []
+lc = LaneCurve()
+res = []
 
-# print(time.time())
-# for i in range(0, 30):
-#     radius, offset = lc.lane_pipeline(cv2.imread('./img' + str(i) + '.png', cv2.IMREAD_GRAYSCALE), i)
-#     print(str(i) + ':\nestimated radius: ' + str(radius) + '\noffset: ' + str(offset))
+radius = lc.lane_pipeline(cv2.imread('./sp1/sample2/cam/img12.png', cv2.IMREAD_GRAYSCALE))
+print('estimated radius: ' + str(radius))
+
+radius = lc.lane_pipeline(cv2.imread('./sp1/sample4/cam/img12.png', cv2.IMREAD_GRAYSCALE))
+print('estimated radius: ' + str(radius))
     
 # print(time.time())
 # a = 22.677478
