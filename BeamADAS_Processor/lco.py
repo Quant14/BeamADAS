@@ -131,9 +131,8 @@ class LaneCurve:
             left_lane = np.concatenate(left_lane)
             right_lane = np.concatenate(right_lane)
         except ValueError:
-            plt.imshow(binary_birdeye)
-            plt.show()
-            exit("No lines detected!")
+            # No lines detected!
+            return None, None, None, None
 
         return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane] # type: ignore
 
@@ -267,6 +266,8 @@ class LaneCurve:
 
         if (len(self.left_fit_hist) == 0):
             leftx, lefty, rightx, righty = self.detect_lane_lines(binary_birdeye)
+            if leftx is None:
+                return None
             left_fit, right_fit, left_fitx, right_fitx, ploty, weight = self.fit_poly(binary_birdeye, leftx, lefty, rightx, righty)
 
             self.left_fit_hist = np.array(left_fit)
@@ -282,6 +283,8 @@ class LaneCurve:
 
             if (len(lefty) == 0 or len(righty) == 0):
                 leftx, lefty, rightx, righty = self.detect_lane_lines(binary_birdeye)
+                if leftx is None:
+                    return None
             left_fit, right_fit, left_fitx, right_fitx, ploty, weight = self.fit_poly(binary_birdeye,leftx, lefty, rightx, righty)             
 
             new_left_fit = np.array(left_fit)
@@ -294,8 +297,8 @@ class LaneCurve:
                 self.right_fit_hist = np.delete(self.right_fit_hist, 0,0)
                    
         # DEBUG - remove for max performance
-        # a = self.draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)            
-        # plt.imsave('./BeamADAS_Processor/cam_res/proc_img' + str(i) + '.png', a)
+        a = self.draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)   
+        plt.imsave('./BeamADAS_Processor/proc_img.png', a)
         # ----------------------------------
         
         left_rad, right_rad =  self.measure_curvature(left_fitx, right_fitx, ploty)
