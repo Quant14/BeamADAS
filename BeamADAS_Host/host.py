@@ -183,9 +183,9 @@ def init(sp, traffic, launch):
         timer.connect(bng, vehicle)
 
         # Set AI driver
-        vehicle.ai_set_speed(22.222, 'limit')
-        vehicle.ai_drive_in_lane(True)
-        vehicle.ai_set_mode('span')
+        # vehicle.ai_set_speed(22.222, 'limit')
+        # vehicle.ai_drive_in_lane(True)
+        # vehicle.ai_set_mode('span')
 
         # Set AI traffic
         if traffic:
@@ -222,7 +222,7 @@ def send_data(socket, type, timestamp, dir, gear, data):
     if type == 'L':
         socket.sendall(struct.pack('>BIfff', type, len(data), timestamp, dir[0], dir[1]) + data)
     elif type == 'P':
-        socket.sendall(struct.pack('>BIfB', type, len(data), timestamp, gear) + data)
+        socket.sendall(struct.pack('>BfB', type, timestamp, gear) + data)
     else:
         socket.sendall(struct.pack('>BI', type, len(data)) + data)
 

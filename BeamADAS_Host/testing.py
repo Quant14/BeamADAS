@@ -19,7 +19,7 @@ from beamngpy.tools import OpenDriveExporter
 # dirs = ['sp1', 'sp1_no_traffic', 'sp2', 'sp2_no_traffic']
 # dirs = ['sp2_no_traffic']
 
-home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp0', False, True)
+home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp1', False, True)
 vehicle.sensors.poll('electrics', 'timer', 'state')
 
 # while electrics.data['running']:
@@ -28,7 +28,10 @@ vehicle.sensors.poll('timer')
 vehicle.sensors.poll('state')
 
 while electrics.data['running']:
-    print(electrics.data['gear_index'])
+    # print(electrics.data['gear'])
+    park_data = np.array([uss_f.stream()[0], uss_fl.stream()[0], uss_fr.stream()[0], 
+            uss_r.stream()[0], uss_rl.stream()[0], uss_rr.stream()[0]], dtype=np.float32)
+    print(park_data)
     vehicle.sensors.poll('electrics')
 
 # for curr_dir in dirs:

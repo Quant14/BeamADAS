@@ -85,8 +85,8 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, exit_event):
                     host.send(socket, 'C', img)
                 elif speed <= 3.333: # Parking speed
                     vehicle.sensors.poll('electrics', 'timer')
-                    park_data = [uss_f.stream(), uss_fl.stream(), uss_fr.stream(), 
-                                uss_r.stream(), uss_rl.stream(), uss_rr.stream()]
+                    park_data = np.array([uss_f.stream()[0], uss_fl.stream()[0], uss_fr.stream()[0], 
+                            uss_r.stream()[0], uss_rl.stream()[0], uss_rr.stream()[0]], dtype=np.float32)
                     host.send(socket, 'P', timer['time'], electrics.data['gear'], park_data)
                 else: # Blind spot detection
                     blind_data = [uss_left.stream(), uss_right.stream()]
