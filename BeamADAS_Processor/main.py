@@ -132,7 +132,14 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
             uss_event.clear()
             with uss.get_lock():
                 curr_time = timestamp.Value
-                curr_data = np.frombuffer(uss.get_obj(), dtype=np.float32, count=8)
+                curr_data = np.frombuffer(uss.get_obj(), dtype=np.float32, count=6)
+            
+            with speed.get_lock():
+                curr_speed = speed.Value
+
+            throttle, brake = sc.uss_speed_control()
+
+            socket.send_data(b'C', np.array([throttle, brake], dtype=np.float32))
     except Exception as e:
         print(e)
     finally:
