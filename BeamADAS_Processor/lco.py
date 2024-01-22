@@ -21,8 +21,8 @@ class LaneCurve:
         # Source points taken from images with straight lane lines
         src = np.array([
             (390, 547), # bottom-left corner
-            (621, 380), # top-left corner
-            (674, 380), # top-right corner
+            (617, 383), # top-left corner
+            (677, 383), # top-right corner
             (903, 547) # bottom-right corner
         ], dtype='f')
         dst = np.array([
@@ -88,8 +88,8 @@ class LaneCurve:
         left_base = np.argmax(histogram[:midpoint])
         right_base = np.argmax(histogram[midpoint:]) + midpoint
 
-        nwindows = 9
-        margin = 100 
+        nwindows = 15
+        margin = 50
         minpix = 50
 
         window_h = np.int32(binary_birdeye.shape[0]//nwindows)
@@ -111,6 +111,8 @@ class LaneCurve:
             win_left_high = left_curr + margin
             win_right_low = right_curr - margin
             win_right_high = right_curr + margin
+
+            print(f'{window}\nleft:{win_left_low}:{win_left_high}\nright:{win_right_low}:{win_right_high}')
 
             # Identiry nonzero pixels within the window
             good_left_lane = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high)
@@ -161,7 +163,7 @@ class LaneCurve:
         # Create an image to draw on and an image to show the selection window
         out_img = np.dstack((binary_birdeye, binary_birdeye, binary_birdeye))*255
         window_img = np.zeros_like(out_img)
-            
+        
         margin = 100
         # Generate a polygon to illustrate the search window area
         # And recast the x and y points into usable format for cv2.fillPoly()

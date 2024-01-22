@@ -20,31 +20,40 @@ class Comm:
         self.socket.sendall(struct.pack('>BI', type, len(data)) + data)
 
     def recv_data(self):
-        recv = self.conn.recv(5)
-        if len(recv) < 5: return None, None, None, None, None
+        recv = self.conn.recv(1)
+        if len(recv) < 1: return None, None, None, None, None, None
 
-        data_type, data_len = struct.unpack('>BI', recv)
-        read_len = 0
-        data = b''
-
-        veh_dir = [0.0, 0.0]
+        data_len = 0
         timestamp = 0.0
+        veh_dir = [0.0, 0.0]
+        gear = ''
 
-        if data_type == 'L' or data_type == 'P':
-            recv = self.conn.recv(4)
-            if len(recv) == 4:
-                timestamp = struct.unpack('>f', recv)
+        data_type = struct.unpack('>B', recv)
 
         if data_type == 'L':
-            recv = self.conn.recv(8)
-            if len(recv) == 8:
-                veh_dir[0], veh_dir[1] = struct.unpack('>ff', recv)
+            recv = self.conn.recv(16)
+            if len(recv) < 16: return None, None, None, None, None, None
 
+            data_len, timestamp, veh_dir[0], veh_dir[1] = struct.unpack('>Ifff', recv)
+        elif data_type == 'P':
+            recv = self.conn.recv(5)
+            if len(recv) < 5: return None, None, None, None, None, None
+
+            timestamp, gear = struct.unpack('>fB', recv)
+            data_len = 24
+        else:
+            recv = self.conn.recv(4)
+            if len(recv) < 4: return None, None, None, None, None, None
+
+            data_len = struct.unpack('>I', recv)
+
+        data = b''
+        read_len = 0    
         while data_len > read_len:
             data += self.conn.recv(data_len - read_len)
             read_len = len(data)
-            
-        return data_type, data_len, timestamp, veh_dir, data
+
+        return data_type, data_len, timestamp, veh_dir, gear, data
 
     def close(self):
         self.conn.close()
