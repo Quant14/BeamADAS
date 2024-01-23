@@ -128,7 +128,11 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
     try:
         curr_speed = 0.0
         curr_time = 0.0
-        curr_data = np.array([], dtype=np.float32)
+        curr_data = np.array(6, dtype=np.float32)
+        rel_data = np.array(3, dtype=np.float32)
+        prev_data = np.array(3, dtype=np.float32)
+        prev_dir = 0
+        prev_time = 0.0
 
         while not quit_event.is_set():
             uss_event.wait()
@@ -136,13 +140,37 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
             with uss.get_lock():
                 curr_time = timestamp.Value
                 curr_data = np.frombuffer(uss.get_obj(), dtype=np.float32, count=6)
-            
-            with speed.get_lock():
-                curr_speed = speed.Value
+                
+            if gear != 'N' and gear != 'P':
+                if gear != 'R':
+                    rel_data = curr_data[:3]
+                    if prev_dir != 1:
+                        prev_dir = 1
+                        prev_data[0] = -1.0
+                else:
+                    rel_data = curr_data[-3:]
+                    if prev_dir != -1:
+                        prev_dir = -1
+                        prev_data[0] = -1.0
 
-            throttle, brake = sc.uss_speed_control()
+            d_time = curr_time - prev_time
+            if prev_time != 0 and d_time <= 3:
+                if prev_data[0] != -1:
+                    max_speed = 0.0
+                    dist = 0.0
+                    rel_data = np.clip(rel_data, a_min=None, a_max=5) # NOTE: CHECK IF 5 IS REAL CAP OF SENSOR
+                    for i in range(0, 3):
+                        speed = (prev_data[i] - rel_data[i]) / d_time
+                        if speed > max_speed:
+                            max_speed = speed
+                            dist = rel_data[i]
 
-            socket.send_data(b'C', np.array([throttle, brake], dtype=np.float32))
+                    throttle, brake = sc.uss_speed_control(dist, max_speed)
+
+                    socket.send_data(b'C', np.array([throttle, brake], dtype=np.float32))
+
+            prev_data = rel_data
+            prev_time = curr_time
     except Exception as e:
         print(e)
     finally:
@@ -189,5 +217,5 @@ def main():
         print('done')
 
 if __name__ == '__main__':
-    mp.freeze_support() # Remove for Raspberry
+    mp.freeze_support() # NOTE: Remove for Raspberry
     main()
