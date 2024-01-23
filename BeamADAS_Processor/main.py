@@ -55,18 +55,21 @@ def cam_process(init_event, quit_event, speed, cam, size, event, cam_last_brake,
                 img = np.frombuffer(cam, dtype=np.uint8, count=size.Value)
                 img = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
 
-            radius, pos = lc.lane_pipeline(img)
-            max_speed = math.sqrt(4.905 * radius) * 3.6
+            radius = lc.lane_pipeline(img)
+            if radius == None:
+                ...
+            else:
+                max_speed = math.sqrt(4.905 * radius) * 3.6
 
-            with speed.get_lock():
-                throttle, brake = sc.cam_speed_control(5, speed.Value, max_speed)
+                with speed.get_lock():
+                    throttle, brake = sc.cam_speed_control(5, speed.Value, max_speed)
 
-            with lidar_last_brake.get_lock():
-                if lidar_last_brake < brake:
-                    socket.send_data(b'C', np.array([throttle, brake], dtype=np.float32))
-            
-            with cam_last_brake.get_lock():
-                cam_last_brake.Value = brake
+                with lidar_last_brake.get_lock():
+                    if lidar_last_brake < brake:
+                        socket.send_data(b'C', np.array([throttle, brake], dtype=np.float32))
+                
+                with cam_last_brake.get_lock():
+                    cam_last_brake.Value = brake
 
     except Exception as e:
         print(e)

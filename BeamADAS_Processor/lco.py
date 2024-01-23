@@ -86,7 +86,7 @@ class LaneCurve:
         # Find lanes starting points
         midpoint = np.int32(histogram.shape[0] // 2)
         left_base = np.argmax(histogram[:midpoint])
-        right_base = np.argmax(histogram[midpoint:]) + midpoint
+        right_base = np.argmax(histogram[midpoint:]) + midpoint # type: ignore
 
         nwindows = 9
         margin = 100 
@@ -105,14 +105,14 @@ class LaneCurve:
         right_lane = []
 
         for window in range(nwindows):
-            win_y_low = binary_birdeye.shape[0] - (window + 1) * window_h
-            win_y_high = binary_birdeye.shape[0] - window * window_h
-            win_left_low = left_curr - margin
-            win_left_high = left_curr + margin
-            win_right_low = right_curr - margin
-            win_right_high = right_curr + margin
+            win_y_low = binary_birdeye.shape[0] - (window + 1) * window_h # type: ignore
+            win_y_high = binary_birdeye.shape[0] - window * window_h # type: ignore
+            win_left_low = left_curr - margin # type: ignore
+            win_left_high = left_curr + margin # type: ignore
+            win_right_low = right_curr - margin # type: ignore
+            win_right_high = right_curr + margin # type: ignore
 
-            # Identiry nonzero pixels within the window
+            # Identify nonzero pixels within the window
             good_left_lane = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high)
                             & (nonzerox >= win_left_low) & (nonzerox < win_left_high)).nonzero()[0]
             good_right_lane = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high)
@@ -180,8 +180,8 @@ class LaneCurve:
         result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
         
         # Plot the polynomial lines onto the image
-        plt.plot(left_fitx, ploty, color='green')
-        plt.plot(right_fitx, ploty, color='blue')
+        # plt.plot(left_fitx, ploty, color='green')
+        # plt.plot(right_fitx, ploty, color='blue')
         ## End visualization steps ##
         return result
         
