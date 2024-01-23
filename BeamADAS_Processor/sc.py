@@ -22,3 +22,6 @@ def lidar_speed_control(dist, speed, target):
         return 0, 0
 
     return 100, 0
+
+def uss_speed_control():
+    
