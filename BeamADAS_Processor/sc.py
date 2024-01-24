@@ -5,17 +5,17 @@ def cam_speed_control(dist, speed, target):
         return 0, ((speed * speed - target * target) / (2 * dist)) / 100 % 1
     else:
         return 100, 0
-    
+
 def lidar_speed_control(dist, speed, target):
     dist -= speed * 2
-    
+
     if target <= 0:
         target = 0
     if dist < 1:
         dist = 1
 
     brake = np.clip(((speed * speed - target * target) / (2 * dist)) / 100, 0.0, 1.0)
-    
+
     if brake >= 0.3:
         return 0, brake
     elif brake >= 0.1:
@@ -24,5 +24,10 @@ def lidar_speed_control(dist, speed, target):
     return 100, 0
 
 def uss_speed_control(dist, speed):
-    ...
+    if dist < 0.1:
+        dist = 0.1
+    brake = speed * speed / (2 * dist) / 100 % 1
+    if brake >= 75:
+        return 0, brake
+
     return 100, 0
