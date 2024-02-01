@@ -35,7 +35,7 @@ def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar,
                 elif data_type == 'I':
                     init_event.set()
                 elif data_type == 'Q':
-                    quit_event.set()        
+                    quit_event.set()
 
     except Exception as e:
         print(e)
@@ -68,7 +68,7 @@ def cam_process(init_event, quit_event, speed, cam, size, timestamp, event, cam_
                 with lidar_last_brake.get_lock():
                     if lidar_last_brake < brake:
                         socket.send_data(b'C', np.array([throttle, brake], dtype=np.float32))
-                
+
                 with cam_last_brake.get_lock():
                     cam_last_brake.Value = brake
 
@@ -95,7 +95,7 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, tim
                 curr_dir = veh_dir[:]
                 curr_time = timestamp.Value
                 curr_data = np.frombuffer(lidar.get_obj(), dtype=np.float32, count=lidar_size.Value).reshape(lidar_size.Value // 3, 3)
-            
+
             with speed.get_lock():
                 curr_speed = speed.Value
 
@@ -105,7 +105,7 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, tim
                 brake = 0.0
                 max_brake = 0.0
                 for i in relevant_indices:
-                    dist, sp, pos, dir = matched_info[i]    
+                    dist, sp, pos, dir = matched_info[i]
                     throttle, brake = sc.lidar_speed_control(dist, curr_speed, curr_speed - sp)
                     if brake > max_brake:
                         max_brake = brake
@@ -139,7 +139,7 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
             with uss.get_lock():
                 curr_time = timestamp.Value
                 curr_data = np.frombuffer(uss.get_obj(), dtype=np.float32, count=6)
-                
+
             if gear != 'N' and gear != 'P':
                 if gear != 'R':
                     rel_data = curr_data[:3]

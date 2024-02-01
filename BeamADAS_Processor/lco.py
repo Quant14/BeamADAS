@@ -153,14 +153,14 @@ class LaneCurve:
             left_fitx = ploty**2 + ploty
             right_fitx = ploty**2 + ploty
 
-        if np.isclose(left_fitx, right_fitx, atol=10).any():
-            return None, None, None, None, None
-
         # plt.plot(left_fit)
         # plt.plot(right_fit)
-        # plt.plot(left_fitx)
-        # plt.plot(right_fitx)
-        # plt.show()
+        plt.plot(left_fitx)
+        plt.plot(right_fitx)
+        plt.show()
+
+        if np.isclose(left_fitx, right_fitx, atol=10).any():
+            return None, None, None, None, None
 
         return left_fit, right_fit, left_fitx, right_fitx, ploty
 
@@ -267,9 +267,13 @@ class LaneCurve:
     # offset = measure_pos(binary_birdeye_2, left_fit, right_fit)
     # print('Offset: ' + str(offset))
 
-    def delete_hist(self):
-        self.left_fit_hist = np.delete(self.left_fit_hist, 0,0)
-        self.right_fit_hist = np.delete(self.right_fit_hist, 0,0)
+    def delete_hist(self, complete):
+        if complete == True:
+            self.left_fit_hist = np.array([])
+            self.right_fit_hist = np.array([])
+        else:
+            self.left_fit_hist = np.delete(self.left_fit_hist, 0,0)
+            self.right_fit_hist = np.delete(self.right_fit_hist, 0,0)
 
     def lane_pipeline(self, img, timestamp):
         if timestamp - self.last_time > 5:
@@ -278,6 +282,8 @@ class LaneCurve:
 
         binary = self.binary_threshold(img)
         binary_birdeye, _ = self.birdeye_view(binary)
+
+        print(len(self.left_fit_hist))
 
         if len(self.left_fit_hist) == 0:
             leftx, lefty, rightx, righty = self.detect_lane_lines(binary_birdeye)
@@ -297,15 +303,15 @@ class LaneCurve:
             if len(lefty) == 0 or len(righty) == 0:
                 leftx, lefty, rightx, righty = self.detect_lane_lines(binary_birdeye)
                 if leftx is None:
-                    self.delete_hist()
+                    self.delete_hist(len(self.left_fit_hist) == 2)
                     return None
             left_fit, right_fit, left_fitx, right_fitx, ploty= self.fit_poly(binary_birdeye,leftx, lefty, rightx, righty)
 
             if left_fit is None:
-                self.delete_hist()
+                self.delete_hist(len(self.left_fit_hist) == 2)
                 return None
             if len(self.left_fit_hist) > 9:
-                self.delete_hist()
+                self.delete_hist(False)
 
         new_left_fit = np.array(left_fit)
         new_right_fit = np.array(right_fit)
@@ -315,8 +321,8 @@ class LaneCurve:
         self.last_time = timestamp
 
         # DEBUG - remove for max performance
-        # a = self.draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)
-        # plt.imsave(f'./BeamADAS_Processor/proc_img{int(time.time())}.png', a)
+        a = self.draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)
+        plt.imsave(f'./BeamADAS_Processor/proc_img{int(time.time())}.png', a)
         # ----------------------------------
 
         left_rad, right_rad =  self.measure_curvature(left_fitx, right_fitx, ploty)
