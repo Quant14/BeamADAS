@@ -10,16 +10,20 @@ import math
 import struct
 
 # MAIN PROCESS ---------------------------------
-def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, lidar_size, veh_dir, timestamp, lidar_event):
+def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, lidar_size, veh_dir, timestamp, lidar_event, uss, uss_event, gear, blind, blind_event):
     socket = comm.Comm(0)
     try:
         while True:
-            data_type, data_len, curr_time, curr_dir, gear, data = socket.recv_data()
+            data_type, data_len, curr_time, curr_dir, curr_gear, data = socket.recv_data()
 
             if data_type != None and data != None:
                 if data_type == 'S':
                     with speed.get_lock():
                         speed.Value = struct.unpack('>f', data)
+                elif data_type == 'B':
+                    with blind.get_lock():
+                        blind[:] = data
+                    blind_event.set()
                 elif data_type == 'C':
                     with cam.get_lock():
                         cam[:data_len] = data
@@ -32,6 +36,12 @@ def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar,
                         lidar[:data_len] = data
                         lidar_size.Value = data_len
                     lidar_event.set()
+                elif data_type == 'P':
+                    with uss.get_lock():
+                        uss[:] = data
+                        timestamp.Value = curr_time
+                        gear.Value = curr_gear
+                    uss_event.set()
                 elif data_type == 'I':
                     init_event.set()
                 elif data_type == 'Q':
@@ -67,7 +77,7 @@ def cam_process(init_event, quit_event, speed, cam, size, timestamp, event, cam_
 
                 with lidar_last_brake.get_lock():
                     if lidar_last_brake < brake:
-                        socket.send_data(b'C', np.array([throttle, brake], dtype=np.float32))
+                        socket.send_data(b'I', np.array([throttle, brake], dtype=np.float32))
 
                 with cam_last_brake.get_lock():
                     cam_last_brake.Value = brake
@@ -112,7 +122,7 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, tim
 
                 with cam_last_brake.get_lock():
                     if cam_last_brake < brake:
-                        socket.send_data(b'C', np.array([throttle, brake], dtype=np.float32))
+                        socket.send_data(b'I', np.array([throttle, brake], dtype=np.float32))
 
                 with lidar_last_brake.get_lock():
                     lidar_last_brake.Value = brake
@@ -122,6 +132,7 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, tim
     finally:
         socket.close()
 
+# USS PROCESS ----------------------------------
 def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
     init_event.wait()
     socket = comm.Comm(3)
@@ -157,7 +168,7 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
                 if prev_data[0] != -1:
                     max_speed = 0.0
                     dist = 0.0
-                    rel_data = np.clip(rel_data, a_min=None, a_max=5) # NOTE: CHECK IF 5 IS REAL CAP OF SENSOR
+                    rel_data = np.clip(rel_data, a_min=0.1, a_max=3)
                     for i in range(0, 3):
                         speed = (prev_data[i] - rel_data[i]) / d_time
                         if speed > max_speed:
@@ -167,10 +178,29 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
 
                     throttle, brake = sc.uss_speed_control(dist, max_speed)
 
-                    socket.send_data(b'C', np.array([throttle, brake], dtype=np.float32))
+                    socket.send_data(b'I', np.array([throttle, brake], dtype=np.float32))
 
             prev_data = rel_data
             prev_time = curr_time
+    except Exception as e:
+        print(e)
+    finally:
+        socket.close()
+
+# BLIND PROCESS --------------------------------
+def blind_process(init_event, quit_event, blind, blind_event):
+    init_event.wait()
+    socket = comm.Comm(4)
+    try:
+        curr_data = np.array(2, dtype=np.float32)
+
+        while not quit_event.is_set():
+            blind_event.wait()
+            blind_event.clear()
+            with blind.get_lock():
+                curr_data = np.frombuffer(blind.get_obj(), dtype=np.float32, count=2)
+
+            socket.send_data(b'B', np.array([int(curr_data[0] < 2), int(curr_data[1] < 2)], dtype=np.uint32))
     except Exception as e:
         print(e)
     finally:
@@ -194,21 +224,27 @@ def main():
         lidar_event = mp.Event()
         lidar_last_brake = mp.Value('f', 0.0, lock=True)
 
-        uss = mp.Array('f', 8, lock=True)
+        uss = mp.Array('f', 6, lock=True)
         uss_event = mp.Event()
+        gear = mp.Value('B', b'N')
+
+        blind = mp.Array('f', 2, lock=True)
+        blind_event = mp.Event()
 
         init_event = mp.Event()
         quit_event = mp.Event()
 
-        main_proc = mp.Process(target=main_process, args=(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, lidar_size, veh_dir, cam_timestamp, timestamp, lidar_event, uss, uss_event))
+        main_proc = mp.Process(target=main_process, args=(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, lidar_size, veh_dir, cam_timestamp, timestamp, lidar_event, uss, uss_event, gear, blind, blind_event))
         cam_proc = mp.Process(target=cam_process, args=(init_event, quit_event, speed, cam, cam_size, cam_timestamp, cam_event, cam_last_brake, lidar_last_brake))
         lidar_proc = mp.Process(target=lidar_process, args=(init_event, quit_event, speed, lidar, lidar_size, veh_dir, timestamp, lidar_event, cam_last_brake, lidar_last_brake))
-        uss_proc = mp.Process(target=uss_process, args=(init_event, quit_event, uss, uss_event, speed, timestamp))
+        uss_proc = mp.Process(target=uss_process, args=(init_event, quit_event, uss, uss_event, timestamp, gear))
+        blind_proc = mp.Process(target=blind_process, args=(init_event, quit_event, blind, blind_event))
 
         main_proc.start()
         cam_proc.start()
         lidar_proc.start()
         uss_proc.start()
+        blind_proc.start()
 
         print('All systems started')
 
@@ -216,6 +252,7 @@ def main():
         cam_proc.join()
         lidar_proc.join()
         uss_proc.join()
+        blind_proc.join()
 
         print('All systems shut down')
     except Exception as e:

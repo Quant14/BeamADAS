@@ -24,8 +24,6 @@ def lidar_speed_control(dist, speed, target):
     return 100, 0
 
 def uss_speed_control(dist, speed):
-    if dist < 0.1:
-        dist = 0.1
     brake = speed * speed / (2 * dist) / 100 % 1
     if brake >= 75:
         return 0, brake

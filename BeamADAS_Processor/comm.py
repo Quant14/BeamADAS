@@ -14,10 +14,14 @@ class Comm:
             self.conn, self.addr = self.socket.accept()
             print("Connected")
         else:
+            # NOTE: DON'T FORGET THIS
             self.socket.connect(("!!!host_ip!!!", 4441 + proc))
 
     def send_data(self, type, data):
-        self.socket.sendall(struct.pack('>BI', type, len(data)) + data)
+        if type == b'I':
+            self.socket.sendall(struct.pack('>Bff', type, data[0], data[1]))
+        elif type == b'B':
+            self.socket.sendall(struct.pack('>BII', type, data[0], data[1]))
 
     def recv_data(self):
         recv = self.conn.recv(1)
@@ -26,7 +30,7 @@ class Comm:
         data_len = 0
         timestamp = 0.0
         veh_dir = [0.0, 0.0]
-        gear = ''
+        gear = 'N'
 
         data_type = struct.unpack('>B', recv)
 
@@ -48,7 +52,7 @@ class Comm:
             data_len = struct.unpack('>I', recv)
 
         data = b''
-        read_len = 0    
+        read_len = 0
         while data_len > read_len:
             data += self.conn.recv(data_len - read_len)
             read_len = len(data)
@@ -57,4 +61,4 @@ class Comm:
 
     def close(self):
         self.conn.close()
-        self.socket.close()        
+        self.socket.close()
