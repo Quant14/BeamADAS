@@ -18,7 +18,7 @@ class LaneCurve:
 
     def birdeye_view(self, img):
         img_size = (img.shape[1], img.shape[0])
-        offset = 450
+        offset = 400
 
         # Source points taken from images with straight lane lines
         src = np.array([
@@ -48,6 +48,7 @@ class LaneCurve:
     def binary_threshold(self, img):
         # Apply sobel in x direction (detect vertical lines)
         blur = cv2.GaussianBlur(img, (5, 5), 0)
+        avg = np.mean(blur)
         # sobelx = cv2.Sobel(blur, cv2.CV_64F, 1, 0) # type: ignore
         # abs_sobelx = np.absolute(sobelx)
 
@@ -66,7 +67,15 @@ class LaneCurve:
 
         # Detect white pixels
         white_binary = np.zeros_like(blur)
-        white_binary[(blur > 190) & (blur <= 240)] = 1
+        print(avg)
+        if avg > 120:
+            white_binary[(blur > 200) & (blur <= 240)] = 1
+        elif avg > 100:
+            white_binary[(blur > 190) & (blur <= 240)] = 1
+        elif avg > 80:
+            white_binary[(blur > 180) & (blur <= 240)] = 1
+        else:
+            white_binary[(blur > 170) & (blur <= 240)] = 1
 
         return white_binary
         # return cv2.bitwise_or(new_binary, white_binary)
@@ -83,16 +92,38 @@ class LaneCurve:
 
     def detect_lane_lines(self, binary_birdeye):
         # Make histogram of bottom half of img
-        histogram = np.sum(binary_birdeye[binary_birdeye.shape[0] // 2:,:], axis=0)
+        # histogram = np.sum(binary_birdeye[binary_birdeye.shape[0] // 2:,:], axis=0)
+        histogram = np.sum(binary_birdeye[650:,:], axis=0)
 
-        # Find lanes starting points
-        midpoint = np.int32(histogram.shape[0] // 2)
+        nonzero_ind = np.nonzero(histogram)[0]
+        peak_bounds = np.split(nonzero_ind, np.where(np.diff(nonzero_ind) > 1)[0] + 1)
+
+        if len(peak_bounds) < 2:
+            return None, None, None, None
+
+        gap_sizes = np.diff([peak[-1] for peak in peak_bounds])
+        max_gap_index = np.argmax(gap_sizes)
+        # print(gap_sizes[max_gap_index])
+
+        if gap_sizes[max_gap_index] < 200:
+            return None, None, None, None
+
+        midpoint = (peak_bounds[max_gap_index][-1] + peak_bounds[max_gap_index + 1][0]) // 2 # type: ignore
+        # print(midpoint)
         left_base = np.argmax(histogram[:midpoint])
+        # print(left_base)
         right_base = np.argmax(histogram[midpoint:]) + midpoint # type: ignore
+        # print(right_base)
+
+        # plt.imsave('my_img.png', binary_birdeye[650:,:])
+        # plt.show()
+
+        plt.plot(histogram)
+        plt.show()
 
         nwindows = 15
-        margin = 50
-        minpix = 50
+        margin = 100
+        minpix = 20
 
         window_h = np.int32(binary_birdeye.shape[0]//nwindows)
 
@@ -106,35 +137,52 @@ class LaneCurve:
         left_lane = []
         right_lane = []
 
+        complete_left = False
+        complete_right = False
+
         for window in range(nwindows):
             win_y_low = binary_birdeye.shape[0] - (window + 1) * window_h # type: ignore
             win_y_high = binary_birdeye.shape[0] - window * window_h # type: ignore
-            win_left_low = left_curr - margin # type: ignore
-            win_left_high = left_curr + margin # type: ignore
-            win_right_low = right_curr - margin # type: ignore
-            win_right_high = right_curr + margin # type: ignore
 
-            # Identify nonzero pixels within the window
-            good_left_lane = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high)
-                            & (nonzerox >= win_left_low) & (nonzerox < win_left_high)).nonzero()[0]
-            good_right_lane = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high)
-                            & (nonzerox >= win_right_low) & (nonzerox < win_right_high)).nonzero()[0]
+            if complete_left and complete_right: break
 
-            # Add lane data and recenter windows if needed
-            if good_left_lane.size != 0:
-                left_lane.append(good_left_lane)
-                if len(good_right_lane) > minpix:
-                    left_curr = np.int32(np.mean(nonzerox[good_left_lane]))
-            if good_right_lane.size != 0:
-                right_lane.append(good_right_lane)
-                if len(good_right_lane) > minpix:
-                    right_curr = np.int32(np.mean(nonzerox[good_right_lane]))
+            if not complete_left:
+                win_left_low = left_curr - margin # type: ignore
+                win_left_high = left_curr + margin # type: ignore
+                good_left_lane = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high)
+                                & (nonzerox >= win_left_low) & (nonzerox < win_left_high)).nonzero()[0]
+                if good_left_lane.size != 0:
+                    left_lane.append(good_left_lane)
+                    if len(good_left_lane) > minpix:
+                        left_curr = np.int32(np.mean(nonzerox[good_left_lane]))
+                        if left_curr - margin <= 0 or left_curr + margin >= 1280: # type: ignore
+                            complete_left = True
+
+                print(f'left: {win_left_low}, {win_left_high}')
+
+            if not complete_right:
+                win_right_low = right_curr - margin # type: ignore
+                win_right_high = right_curr + margin # type: ignore
+
+                # Identify nonzero pixels within the window
+                good_right_lane = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high)
+                                & (nonzerox >= win_right_low) & (nonzerox < win_right_high)).nonzero()[0]
+
+                # Add lane data and recenter windows if needed
+                if good_right_lane.size != 0:
+                    right_lane.append(good_right_lane)
+                    if len(good_right_lane) > minpix:
+                        right_curr = np.int32(np.mean(nonzerox[good_right_lane]))
+                        if right_curr - margin <= 0 or right_curr + margin >= 1280: # type: ignore
+                            complete_right = True
+
+                print(f'right: {win_right_low}, {win_right_high}')
 
         try:
             left_lane = np.concatenate(left_lane)
             right_lane = np.concatenate(right_lane)
         except ValueError:
-            # No lines detected!
+            print('No lines detected!')
             return None, None, None, None
 
         return nonzerox[left_lane], nonzeroy[left_lane], nonzerox[right_lane], nonzeroy[right_lane] # type: ignore
@@ -159,7 +207,10 @@ class LaneCurve:
         plt.plot(right_fitx)
         plt.show()
 
-        if np.isclose(left_fitx, right_fitx, atol=10).any():
+        a = self.draw_poly_lines(binary_birdeye, left_fitx, right_fitx, ploty)
+        plt.imsave(f'./BeamADAS_Processor/proc_img{int(time.time())}.png', a)
+
+        if np.isclose(left_fitx, right_fitx, atol=250).any():
             return None, None, None, None, None
 
         return left_fit, right_fit, left_fitx, right_fitx, ploty

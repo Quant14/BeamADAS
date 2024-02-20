@@ -60,7 +60,7 @@ def cam_process(init_event, quit_event, speed, cam, size, timestamp, event, cam_
 
             radius = lc.lane_pipeline(img, curr_time)
             if radius != None:
-                max_speed = math.sqrt(4.905 * radius) * 3.6
+                max_speed = math.sqrt(4.905 * radius) * (3.6 + 0.4) # type: ignore
 
                 with speed.get_lock():
                     throttle, brake = sc.cam_speed_control(5, speed.Value, max_speed)

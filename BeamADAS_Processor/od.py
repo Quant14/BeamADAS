@@ -94,7 +94,7 @@ class ObjectDetect:
                                  movement_vector))
 
         return centroids, matched_info
-    
+
     def analyze_relevancy(self, matched_info, veh_dir):
         A = -veh_dir[0] / veh_dir[1]
         B = -1
@@ -116,7 +116,7 @@ class ObjectDetect:
 
             if np.dot(intersection, intersection) <= 1.0:
                 np.append(relevant_indices, i)
-            
+
             i += 1
 
         return relevant_indices
