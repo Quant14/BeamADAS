@@ -7,7 +7,7 @@ import struct
 from beamngpy import BeamNGpy, Scenario, Vehicle
 from beamngpy.sensors import Camera, Lidar, Ultrasonic, Electrics, Timer
 
-def init(sp, traffic, launch):
+def init(sp, ai, traffic, launch):
     # Open BeamNG.tech home directory
     home = open(os.path.join(os.getcwd(), "bngtechdir.txt"), "r")
 
@@ -41,22 +41,23 @@ def init(sp, traffic, launch):
 
         # Init sensors
         camera = Camera('camera',
-                bng,
-                vehicle,
-                requested_update_time=0.066,
-                pos=(0, -0.35, 1.3),
-                resolution=(1280, 720),
-                field_of_view_y=55,
-                near_far_planes=(0.1, 100),
-                is_render_colours=True,
-                is_render_annotations=False,
-                is_render_depth=False,
-                is_streaming=True,
-                is_using_shared_memory=True)
+                    bng,
+                    vehicle,
+                    requested_update_time=0.0666,
+                    pos=(0, -0.35, 1.3),
+                    resolution=(1280, 720),
+                    field_of_view_y=55,
+                    near_far_planes=(0.1, 100),
+                    is_render_colours=True,
+                    is_render_depth=False,
+                    is_render_annotations=False,
+                    is_render_instance=False,
+                    is_streaming=True,
+                    is_using_shared_memory=True)
         lidar = Lidar('lidar',
                     bng,
                     vehicle,
-                    requested_update_time=0.033,
+                    requested_update_time=0.0333,
                     pos=(0, -2.25, 0.60),
                     dir=(-1, 0.1, 0),
                     vertical_resolution=20,
@@ -70,13 +71,13 @@ def init(sp, traffic, launch):
         uss_f = Ultrasonic('uss_f',
                         bng,
                         vehicle,
-                        requested_update_time=0.066,
+                        requested_update_time=0.0666,
                         pos=(0, -2.3, 0.4),
                         dir=(0, -1, 0),
                         field_of_view_y=45,
-                        near_far_planes=(0.1, 8.0),
+                        near_far_planes=(0.1, 3.0),
                         range_min_cutoff=0.1,
-                        range_direct_max_cutoff=8.0,
+                        range_direct_max_cutoff=3.0,
                         sensitivity=0.005,
                         is_visualised=False,
                         is_streaming=True)
@@ -183,9 +184,10 @@ def init(sp, traffic, launch):
         timer.connect(bng, vehicle)
 
         # Set AI driver
-        vehicle.ai_set_speed(22.222, 'limit')
-        vehicle.ai_drive_in_lane(True)
-        vehicle.ai_set_mode('span')
+        if ai:
+            vehicle.ai_set_speed(22.222, 'limit')
+            vehicle.ai_drive_in_lane(True)
+            vehicle.ai_set_mode('span')
 
         # Set AI traffic
         if traffic:
@@ -215,11 +217,14 @@ def destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, 
     vehicle.detach_sensor('timer')
     timer.detach(vehicle, 'timer')
     timer.disconnect(bng, vehicle)
+    scenario.close()
     bng.close()
     home.close()
 
 def send_data(socket, type, timestamp, dir, gear, data):
-    if type == 'L':
+    if type == 'C':
+        socket.sendall(struct.pack('>Bf', type, timestamp) + data)
+    elif type == 'L':
         socket.sendall(struct.pack('>BIfff', type, len(data), timestamp, dir[0], dir[1]) + data)
     elif type == 'P':
         socket.sendall(struct.pack('>BfB', type, timestamp, gear) + data)
