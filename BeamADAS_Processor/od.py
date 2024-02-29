@@ -1,37 +1,6 @@
-# import cv2
 import numpy as np
-# import time
-# import matplotlib.pyplot as plt
-# from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import DBSCAN
 from scipy.optimize import linear_sum_assignment
-
-# import comm
-
-# socket = comm.Comm()
-
-# try:
-#     data = socket.recv_data()
-#     if data == None: exit()
-#     # data = np.frombuffer(data, dtype=np.float32).reshape((800, 3))
-#     # print(data)
-#     # with open('socket.png', 'wb') as file:
-#     #     file.write(data)
-
-#     socket.send_data(b'')
-# except Exception as e:
-#     print(e)
-# finally:
-#     socket.close()
-
-# exit()
-# print('a')
-# size = struct.unpack('H', ser.read(2))[0]
-# print('b')
-# data = struct.unpack(f'{size}f', ser.read(4 * size))
-# print('c')
-
-# lidar_data = np.array(data).reshape((size // 3, 3))
 
 class ObjectDetect:
     def __init__(self):
@@ -39,10 +8,8 @@ class ObjectDetect:
         self.timestamp_prev = 0.0
 
     def find_clusters(self, lidar_data):
-        self.lidar_data_prev = lidar_data
         distance_thresholds = [(2.5, 25.0), (25.0, 50.0), (50.0, 100.0)]
 
-        # Do work
         cluster_data = []
 
         for i, threshold in enumerate(distance_thresholds):
@@ -61,17 +28,14 @@ class ObjectDetect:
                 clusters = dbscan.fit_predict(segment_data)
                 for cluster_id in np.unique(clusters[clusters != -1]):
                     cluster_points = segment_data[clusters == cluster_id]
-                    # cluster_data.append((i, cluster_id, cluster_points)) # Segment, id, points
                     cluster_data.append(cluster_points) # Points only
 
                 lidar_data = lidar_data[np.logical_not(segment_criteria)]
 
-        self.cluster_data_prev = cluster_data
-
         return cluster_data
 
     def match_and_track(self, cluster_data, elapsed, speed):
-        centroids = np.mean(cluster_data, axis=1)
+        centroids = np.array([np.mean(obj, axis=0) for obj in cluster_data])
 
         thresh = elapsed * speed * 2
 
@@ -88,23 +52,25 @@ class ObjectDetect:
 
             movement_vector = prev_cluster - curr_cluster
 
-            matched_info.append((distances[i, j],
+            matched_info.append((np.linalg.norm(curr_cluster),
                                  distances[i, j] / elapsed,
                                  curr_cluster,
-                                 movement_vector))
+                                 movement_vector[:2]))
 
-        return centroids, matched_info
+        self.centroids_prev = centroids
+
+        return matched_info
 
     def analyze_relevancy(self, matched_info, veh_dir):
         A = -veh_dir[0] / veh_dir[1]
         B = -1
         C = 0
 
-        relevant_indices = np.array([], dtype=np.int16)
+        relevant_indices = np.array([], dtype=np.uint8)
         i = 0
 
         for dist, sp, pos, dir in matched_info:
-            if np.dot(dir / np.linalg.norm(dir), veh_dir) > -0.5:
+            if np.dot(dir / np.linalg.norm(dir), veh_dir) > -0.7:
                continue
             A1 = -dir[1]
             B1 = dir[0]
@@ -114,7 +80,7 @@ class ObjectDetect:
 
             intersection = [(C1 * B - C * B1) / det, (C * A1 - C1 * A) / det]
 
-            if np.dot(intersection, intersection) <= 1.0:
+            if np.linalg.norm(intersection) <= 2.0:
                 np.append(relevant_indices, i)
 
             i += 1
@@ -125,41 +91,11 @@ class ObjectDetect:
         cluster_data = self.find_clusters(lidar_data)
 
         if self.timestamp_prev != 0.0 and timestamp - self.timestamp_prev <= 1:
-            centroids, matched_info = self.match_and_track(cluster_data, timestamp - self.timestamp_prev, speed)
-            self.centroids_prev = centroids
+            matched_info = self.match_and_track(cluster_data, timestamp - self.timestamp_prev, speed)
             relevant_indices = self.analyze_relevancy(matched_info, dir)
             self.timestamp_prev = timestamp
             return matched_info, relevant_indices
-            # continue with distance and speed analysis
         else:
-            self.centroids_prev = np.mean(cluster_data, axis=1)
+            self.centroids_prev = np.array([np.mean(obj, axis=0) for obj in cluster_data])
             self.timestamp_prev = timestamp
             return None, None
-
-# od = ObjectDetect()
-
-# for j in range(0, 5):
-#     print(j * 3)
-#     path = f'sp2/sample2/lidar/pc{j * 3}.txt'
-#     lidar_data = np.genfromtxt(path, delimiter=' ')
-#     t = time.time()
-#     matched_info, relevant_indices = od.lidar_pipeline(lidar_data, t, 40.0, [dir_x, dir_y]) # new accurate data generation would be needed for this testing
-#     # od.analyze_clusters(cluster_data)
-#     print(time.time() - t)
-#     lidar_data_original = lidar_data # Plotting
-
-#     # Plotting
-#     x = lidar_data_original[:, 0]
-#     y = lidar_data_original[:, 1]
-#     z = lidar_data_original[:, 2]
-
-#     plot = plt.figure().add_subplot(111, projection='3d')
-#     plot.scatter(x, y, z, alpha=0.1)
-
-#     for cluster_info in cluster_data:
-#         j, cluster_id, cluster_points = cluster_info
-#         plot.scatter(cluster_points[:, 0], cluster_points[:, 1], cluster_points[:, 2], alpha=1)
-
-#     plot.axis('equal')
-#     plt.show()
-# ser.close()

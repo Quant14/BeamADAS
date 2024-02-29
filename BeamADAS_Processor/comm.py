@@ -1,5 +1,6 @@
 import socket
 import struct
+import time
 
 class Comm:
     def __init__(self, proc):
@@ -14,7 +15,8 @@ class Comm:
             self.conn, self.addr = self.socket.accept()
             print("Connected")
         else:
-            # NOTE: DON'T FORGET THIS
+            time.sleep(3)
+
             self.socket.connect(("!!!host_ip!!!", 4441 + proc))
 
     def send_data(self, type, data):
@@ -45,6 +47,12 @@ class Comm:
 
             timestamp, gear = struct.unpack('>fB', recv)
             data_len = 24
+        elif data_type == 'C':
+            recv = self.conn.recv(4)
+            if len(recv) < 4: return None, None, None, None, None, None
+
+            data_len = 921600
+            timestamp = struct.unpack('>f', recv)
         else:
             recv = self.conn.recv(4)
             if len(recv) < 4: return None, None, None, None, None, None

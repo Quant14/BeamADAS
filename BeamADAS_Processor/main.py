@@ -3,14 +3,13 @@ from lco import LaneCurve
 from od import ObjectDetect
 import sc
 
-import cv2
 import numpy as np
 import multiprocessing as mp
 import math
 import struct
 
 # MAIN PROCESS ---------------------------------
-def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, lidar_size, veh_dir, timestamp, lidar_event, uss, uss_event, gear, blind, blind_event):
+def main_process(init_event, quit_event, speed, cam, cam_event, lidar, lidar_size, veh_dir, cam_timestamp, timestamp, lidar_event, uss, uss_event, gear, blind, blind_event, cam_last_brake, lidar_last_brake):
     socket = comm.Comm(0)
     try:
         while True:
@@ -20,14 +19,20 @@ def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar,
                 if data_type == 'S':
                     with speed.get_lock():
                         speed.Value = struct.unpack('>f', data)
+                        with cam_last_brake.get_lock() and lidar_last_brake.get_lock():
+                            if speed.Value < 8.333:
+                                cam_last_brake.Value = 0
+                                lidar_last_brake.Value = 0
+                            elif speed.Value < 11.111:
+                                lidar_last_brake.Value = 0
                 elif data_type == 'B':
                     with blind.get_lock():
                         blind[:] = data
                     blind_event.set()
                 elif data_type == 'C':
                     with cam.get_lock():
-                        cam[:data_len] = data
-                        cam_size.Value = data_len
+                        cam[:] = data
+                        cam_timestamp.Value = curr_time
                     cam_event.set()
                 elif data_type == 'L':
                     with lidar.get_lock():
@@ -53,7 +58,7 @@ def main_process(init_event, quit_event, speed, cam, cam_size, cam_event, lidar,
         socket.close()
 
 # CAM PROCESS ----------------------------------
-def cam_process(init_event, quit_event, speed, cam, size, timestamp, event, cam_last_brake, lidar_last_brake):
+def cam_process(init_event, quit_event, speed, cam, timestamp, event, cam_last_brake, lidar_last_brake):
     init_event.wait()
     lc = LaneCurve()
     socket = comm.Comm(1)
@@ -64,19 +69,20 @@ def cam_process(init_event, quit_event, speed, cam, size, timestamp, event, cam_
             event.clear()
 
             with cam.get_lock():
-                img = np.frombuffer(cam.get_obj(), dtype=np.uint8, count=size.Value)
-                img = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
+                img = np.frombuffer(cam.get_obj(), dtype=np.uint8).reshape((720, 1280))
                 curr_time = timestamp.Value
+
+            with speed.get_lock():
+                curr_speed = speed.Value
 
             radius = lc.lane_pipeline(img, curr_time)
             if radius != None:
                 max_speed = math.sqrt(4.905 * radius) * (3.6 + 0.4) # type: ignore
 
-                with speed.get_lock():
-                    throttle, brake = sc.cam_speed_control(5, speed.Value, max_speed)
+                throttle, brake = sc.cam_speed_control(5, curr_speed, max_speed)
 
                 with lidar_last_brake.get_lock():
-                    if lidar_last_brake < brake:
+                    if lidar_last_brake.Value <= brake:
                         socket.send_data(b'I', np.array([throttle, brake], dtype=np.float32))
 
                 with cam_last_brake.get_lock():
@@ -110,22 +116,22 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, tim
                 curr_speed = speed.Value
 
             matched_info, relevant_indices = od.lidar_pipeline(curr_data, curr_time, curr_speed, curr_dir)
+            max_brake = 0.0
+            min_throttle = 100.0
             if relevant_indices != None and matched_info != None:
-                throttle = 0.0
-                brake = 0.0
-                max_brake = 0.0
                 for i in relevant_indices:
                     dist, sp, pos, dir = matched_info[i]
                     throttle, brake = sc.lidar_speed_control(dist, curr_speed, curr_speed - sp)
                     if brake > max_brake:
                         max_brake = brake
+                        min_throttle = throttle
 
-                with cam_last_brake.get_lock():
-                    if cam_last_brake < brake:
-                        socket.send_data(b'I', np.array([throttle, brake], dtype=np.float32))
+            with cam_last_brake.get_lock():
+                if cam_last_brake.Value <= max_brake or curr_speed < 11.111:
+                    socket.send_data(b'I', np.array([min_throttle, max_brake], dtype=np.float32))
 
-                with lidar_last_brake.get_lock():
-                    lidar_last_brake.Value = brake
+            with lidar_last_brake.get_lock():
+                lidar_last_brake.Value = max_brake
 
     except Exception as e:
         print(e)
@@ -143,6 +149,8 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
         prev_data = np.array(3, dtype=np.float32)
         prev_dir = 0
         prev_time = 0.0
+        throttle = 100.0
+        brake = 0.0
 
         while not quit_event.is_set():
             uss_event.wait()
@@ -163,22 +171,22 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
                         prev_dir = -1
                         prev_data[0] = -1.0
 
-            d_time = curr_time - prev_time
-            if prev_time != 0 and d_time <= 3:
-                if prev_data[0] != -1:
-                    max_speed = 0.0
-                    dist = 0.0
-                    rel_data = np.clip(rel_data, a_min=0.1, a_max=3)
-                    for i in range(0, 3):
-                        speed = (prev_data[i] - rel_data[i]) / d_time
-                        if speed > max_speed:
-                            max_speed = speed
-                            dist = rel_data[i] - 0.2
-                            break
+                d_time = curr_time - prev_time
+                if prev_time != 0 and d_time <= 3:
+                    if prev_data[0] != -1:
+                        max_speed = 0.0
+                        dist = 0.0
+                        rel_data = np.clip(rel_data, a_min=0.1, a_max=3)
+                        for i in range(0, 3):
+                            speed = (prev_data[i] - rel_data[i]) / d_time
+                            if speed > max_speed:
+                                max_speed = speed
+                                dist = rel_data[i] - 0.1
+                                break
 
-                    throttle, brake = sc.uss_speed_control(dist, max_speed)
+                        throttle, brake = sc.uss_speed_control(dist, max_speed)
 
-                    socket.send_data(b'I', np.array([throttle, brake], dtype=np.float32))
+            socket.send_data(b'I', np.array([throttle, brake], dtype=np.float32))
 
             prev_data = rel_data
             prev_time = curr_time
@@ -211,8 +219,7 @@ def main():
     try:
         speed = mp.Value('f', 0.0, lock=True)
 
-        cam = mp.Array('B', 1048576, lock=True)
-        cam_size = mp.Value('I', 0)
+        cam = mp.Array('B', 921600, lock=True)
         cam_timestamp = mp.Value('f', 0.0)
         cam_event = mp.Event()
         cam_last_brake = mp.Value('f', 0.0, lock=True)
@@ -234,8 +241,8 @@ def main():
         init_event = mp.Event()
         quit_event = mp.Event()
 
-        main_proc = mp.Process(target=main_process, args=(init_event, quit_event, speed, cam, cam_size, cam_event, lidar, lidar_size, veh_dir, cam_timestamp, timestamp, lidar_event, uss, uss_event, gear, blind, blind_event))
-        cam_proc = mp.Process(target=cam_process, args=(init_event, quit_event, speed, cam, cam_size, cam_timestamp, cam_event, cam_last_brake, lidar_last_brake))
+        main_proc = mp.Process(target=main_process, args=(init_event, quit_event, speed, cam, cam_event, lidar, lidar_size, veh_dir, cam_timestamp, timestamp, lidar_event, uss, uss_event, gear, blind, blind_event, cam_last_brake, lidar_last_brake))
+        cam_proc = mp.Process(target=cam_process, args=(init_event, quit_event, speed, cam, cam_timestamp, cam_event, cam_last_brake, lidar_last_brake))
         lidar_proc = mp.Process(target=lidar_process, args=(init_event, quit_event, speed, lidar, lidar_size, veh_dir, timestamp, lidar_event, cam_last_brake, lidar_last_brake))
         uss_proc = mp.Process(target=uss_process, args=(init_event, quit_event, uss, uss_event, timestamp, gear))
         blind_proc = mp.Process(target=blind_process, args=(init_event, quit_event, blind, blind_event))
@@ -261,5 +268,4 @@ def main():
         print('done')
 
 if __name__ == '__main__':
-    mp.freeze_support() # NOTE: Remove for Raspberry
     main()
