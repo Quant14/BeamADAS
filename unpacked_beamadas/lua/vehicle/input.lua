@@ -79,15 +79,12 @@ local autocenterEnabled = false
 local autocenterM = nil
 local autocenterN = nil
 
-local min, max, abs, sqrt = math.min, math.max, math.abs, math.sqrt
-
--- local adasActive = false
--- local adasLast = 0
-
 local lastAdasBrake = 0
-local lastAdasThrottle = 100
 local lastDriverBrake = 0
+local lastAdasThrottle = 100
 local lastDriverThrottle = 0
+
+local min, max, abs, sqrt = math.min, math.max, math.abs, math.sqrt
 
 local function init()
   --inRate (towards the center), outRate (away from the center), autoCenterRate, startingValue
@@ -332,7 +329,7 @@ local vehicleMassCache
 local function vehicleMass()
   if not vehicleMassCache then
     vehicleMassCache = 0
-    for _, n in pairs(v.data.nodes) do
+    for _, n in pairs(v.data.nodes or {}) do
       vehicleMassCache = vehicleMassCache + n.nodeWeight
     end
   end
@@ -341,7 +338,7 @@ end
 
 local function getTotalDownforceFactor()
   local downforce = 0
-  for _, wd in pairs(wheels.wheels) do
+  for _, wd in pairs(wheels.wheels or {}) do
     downforce = downforce + wd.downForce
   end
   return downforce / vehicleMass()
@@ -710,26 +707,6 @@ local function evalAdasActive(itype, ivalue, filter)
       end
     end
   end
-  
-  -- Not value-based evaluation
-  -- if adasActive then -- ADAS active state
-  --   if filter == 1 then -- allow only control() input
-  --     adasLast = adasTime
-  --     return true
-  --   else if adasTime - adasLast > 0.3 then -- if no control() input for last 300ms, allow user control
-        
-  --       adasActive = false
-  --       return true
-  --     end
-  --   end
-  --   return false -- user input and recent control() input
-  -- else -- ADAS ready state
-  --   if filter == 1 then -- control() input detected, go into ADAS active state
-  --     adasLast = adasTime
-  --     adasActive = true
-  --   end
-  --   return true -- allow all inputs
-  -- end
 end
 
 local function event(itype, ivalue, filter, angle, lockType, source)

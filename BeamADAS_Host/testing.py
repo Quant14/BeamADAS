@@ -2,6 +2,7 @@
 
 import host
 
+import cv2
 import sys
 import os
 import time
@@ -19,20 +20,45 @@ from beamngpy.tools import OpenDriveExporter
 # dirs = ['sp1', 'sp1_no_traffic', 'sp2', 'sp2_no_traffic']
 # dirs = ['sp2_no_traffic']
 
-home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp1', False, True)
+home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp0', False, True)
 vehicle.sensors.poll('electrics', 'timer', 'state')
 
-# while electrics.data['running']:
-vehicle.sensors.poll('electrics')
-vehicle.sensors.poll('timer')
-vehicle.sensors.poll('state')
-
 while electrics.data['running']:
-    # print(electrics.data['gear'])
-    park_data = np.array([uss_f.stream()[0], uss_fl.stream()[0], uss_fr.stream()[0], 
-            uss_r.stream()[0], uss_rl.stream()[0], uss_rr.stream()[0]], dtype=np.float32)
-    print(park_data)
     vehicle.sensors.poll('electrics')
+
+t = time.time()
+camera_data = camera.stream_colour(3686400)
+camera_data = np.array(camera_data).reshape(height, width, 4)
+camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+# camera_data = Image.fromarray(camera_data, 'L')
+print(time.time() - t)
+
+# t1 = time.time()
+# camera_data.save('cam.png', 'PNG')
+# img = open('cam.png', 'rb').read()
+# print(time.time() - t1)
+
+t2 = time.time()
+img2 = camera_data.tobytes()
+# print(time.time() - t2)
+
+# print(len(img))
+# print('separator')
+print(len(img2))
+
+# t = time.time()
+# img = np.frombuffer(img, dtype=np.uint8)
+# img = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
+# print(time.time() - t)
+
+# t2 = time.time()
+img2 = np.frombuffer(img2, dtype=np.uint8).reshape((720, 1280))
+# print(img2)
+print(time.time() - t2)
+
+# print(len(img))
+# print('separator')
+# print(len(img2))
 
 # for curr_dir in dirs:
 #     home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init(curr_dir, len(curr_dir) == 3)
