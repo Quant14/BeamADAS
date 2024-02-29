@@ -31,7 +31,7 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
     print('Connecting to Pi4...')
 
     socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    socket.connect(("169.254.151.166", 4441))
+    socket.connect(("!!!microcomputer_ip!!!", 4441))
 
     try:
         print('Initiating Pi4...')
@@ -108,8 +108,6 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
 
             bng.resume()
             second += 1
-
-            # NOTE: for blind spots use hystheresis to filter noise
 
     except Exception as e:
         print(e)
