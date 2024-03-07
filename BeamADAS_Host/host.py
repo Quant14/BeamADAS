@@ -1,7 +1,7 @@
 # This file includes the host init and destroy code for a cleaner main file
 
 import os
-import socket
+import socket as sock
 import struct
 
 from beamngpy import BeamNGpy, Scenario, Vehicle
@@ -198,44 +198,48 @@ def init(sp, ai, traffic, launch):
         vehicle = bng.vehicles.get_current()['ego_vehicle']
         vehicle.connect(bng)
 
+        return home, bng, scenario, vehicle, None, None, None, None, None, None, None, None, None, None, None, None
+
     return home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer
 
 def destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer):
-    camera.remove()
-    lidar.remove()
-    uss_f.remove()
-    uss_fl.remove()
-    uss_fr.remove()
-    uss_r.remove()
-    uss_rl.remove()
-    uss_rr.remove()
-    uss_left.remove()
-    uss_right.remove()
-    vehicle.detach_sensor('electrics')
-    electrics.detach(vehicle, 'electrics')
-    electrics.disconnect(bng, vehicle)
-    vehicle.detach_sensor('timer')
-    timer.detach(vehicle, 'timer')
-    timer.disconnect(bng, vehicle)
-    scenario.close()
+    if camera:
+        camera.remove()
+        lidar.remove()
+        uss_f.remove()
+        uss_fl.remove()
+        uss_fr.remove()
+        uss_r.remove()
+        uss_rl.remove()
+        uss_rr.remove()
+        uss_left.remove()
+        uss_right.remove()
+        vehicle.detach_sensor('electrics')
+        electrics.detach(vehicle, 'electrics')
+        electrics.disconnect(bng, vehicle)
+        vehicle.detach_sensor('timer')
+        timer.detach(vehicle, 'timer')
+        timer.disconnect(bng, vehicle)
     bng.close()
     home.close()
 
 def send_data(socket, type, timestamp, dir, gear, data):
-    if type == 'C':
-        socket.sendall(struct.pack('>Bf', type, timestamp) + data)
-    elif type == 'L':
-        socket.sendall(struct.pack('>BIfff', type, len(data), timestamp, dir[0], dir[1]) + data)
-    elif type == 'P':
-        socket.sendall(struct.pack('>BfB', type, timestamp, gear) + data)
+    if type == b'S':
+        socket.sendall(struct.pack('>cf', type, data))
+    if type == b'C':
+        socket.sendall(struct.pack('>cf', type, timestamp) + data)
+    elif type == b'L':
+        socket.sendall(struct.pack('>cIfff', type, len(data), timestamp, dir[0], dir[1]) + data)
+    elif type == b'P':
+        socket.sendall(struct.pack('>cfB', type, timestamp, gear) + data)
     else:
-        socket.sendall(struct.pack('>BI', type, len(data)) + data)
+        socket.sendall(struct.pack('>cI', type, len(data)) + data)
 
 def recv_data(socket):
     data_len = socket.recv(5)
     if len(data_len) < 5: return None, None, None
 
-    data_type, data_len = struct.unpack('>BI', data_len)
+    data_type, data_len = struct.unpack('>cI', data_len)
     read_len = 0
     data = b''
 

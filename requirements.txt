@@ -1,2 +1,2 @@
 beamngpy==1.28
-numpy==1.25.2
+numpy==1.26.4

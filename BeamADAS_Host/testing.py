@@ -20,41 +20,63 @@ from beamngpy.tools import OpenDriveExporter
 # dirs = ['sp1', 'sp1_no_traffic', 'sp2', 'sp2_no_traffic']
 # dirs = ['sp2_no_traffic']
 
-home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp0', False, True)
+home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp0', False, False, True)
 vehicle.sensors.poll('electrics', 'timer', 'state')
 
-while electrics.data['running']:
-    vehicle.sensors.poll('electrics')
+vehicle.sensors.poll('state', 'timer')
+lidar_data_readonly = lidar.stream()
+pos = np.array([vehicle.state['pos'][0], vehicle.state['pos'][1] - 2.25, vehicle.state['pos'][2] + 0.6])
+direction = vehicle.state['dir']
 
-t = time.time()
-camera_data = camera.stream_colour(3686400)
-camera_data = np.array(camera_data).reshape(height, width, 4)
-camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
-# camera_data = Image.fromarray(camera_data, 'L')
-print(time.time() - t)
+lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
+lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
 
-# t1 = time.time()
-# camera_data.save('cam.png', 'PNG')
-# img = open('cam.png', 'rb').read()
-# print(time.time() - t1)
+transform = np.identity(4)
+transform[:3, 3] = -pos
 
-t2 = time.time()
-img2 = camera_data.tobytes()
-# print(time.time() - t2)
+lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
+lidar_data = np.dot(lidar_data, transform.T)[:, :3]
 
-# print(len(img))
-# print('separator')
-print(len(img2))
+lidar_data = lidar_data[np.dot(lidar_data, direction) >= 0]
+
+print(lidar_data.shape)
+print(len(lidar_data.tobytes()))
+print(lidar_data)
+print(lidar_data.astype(np.float32))
+# while electrics.data['running']:
+#     vehicle.sensors.poll('electrics')
+#     time.sleep(1)
+
+# time.sleep(1)
 
 # t = time.time()
-# img = np.frombuffer(img, dtype=np.uint8)
-# img = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
+# camera_data = camera.stream_colour(3686400)
+# camera_data = np.array(camera_data).reshape(height, width, 4)
+# camera_data = (0.299 * camera_data[:, :, 0] + 0.587 * camera_data[:, :, 1] + 0.114 * camera_data[:, :, 2]).astype(np.uint8)
+# # camera_data = Image.fromarray(camera_data, 'L')
+# img = camera_data.tobytes()
 # print(time.time() - t)
+# # transfer
+# t2 = time.time()
+# img = np.frombuffer(img, dtype=np.uint8, count=921600).reshape((720, 1280))
+# print(time.time() - t2)
+
+# t = time.time()
+# camera_data = camera.stream_raw()['colour']
+# print(time.time() - t)
+# #transfer
+# t2 = time.time()
+# img = np.frombuffer(camera_data, dtype=np.uint8).reshape((921600, 4))
+# img_rgb = img[:, :3]
+# img_grey = np.dot(img_rgb, [0.2989, 0.5870, 0.1140]).astype(np.uint8).reshape((720, 1280))
+# print(time.time() - t2)
+# print(img_grey)
+# print(img)
 
 # t2 = time.time()
-img2 = np.frombuffer(img2, dtype=np.uint8).reshape((720, 1280))
+# img2 = np.frombuffer(img2, dtype=np.uint8).reshape((720, 1280))
 # print(img2)
-print(time.time() - t2)
+# print(time.time() - t2)
 
 # print(len(img))
 # print('separator')
