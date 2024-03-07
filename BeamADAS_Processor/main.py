@@ -65,9 +65,11 @@ def cam_process(init_event, quit_event, speed, cam, timestamp, event, cam_last_b
     try:
         curr_time = 0.0
         while not quit_event.is_set():
+            print('Cam: Waiting...')
             event.wait()
             event.clear()
 
+            print('Cam: Processing...')
             with cam.get_lock():
                 img = np.frombuffer(cam.get_obj(), dtype=np.uint8).reshape((720, 1280))
                 curr_time = timestamp.Value
@@ -78,8 +80,10 @@ def cam_process(init_event, quit_event, speed, cam, timestamp, event, cam_last_b
             radius = lc.lane_pipeline(img, curr_time)
             if radius != None:
                 max_speed = math.sqrt(4.905 * radius) * (3.6 + 0.4) # type: ignore
+                print(f'Cam: Max speed: {max_speed}')
 
                 throttle, brake = sc.cam_speed_control(5, curr_speed, max_speed)
+                print(f'Cam: Throttle: {throttle}, Brake: {brake}')
 
                 with lidar_last_brake.get_lock():
                     if lidar_last_brake.Value <= brake:
@@ -105,8 +109,11 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, tim
         od = ObjectDetect()
 
         while not quit_event.is_set():
+            print('Lidar: Waiting...')
             lidar_event.wait()
             lidar_event.clear()
+
+            print('Lidar: Processing...')
             with lidar.get_lock():
                 curr_dir = veh_dir[:]
                 curr_time = timestamp.Value
@@ -119,6 +126,7 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, tim
             max_brake = 0.0
             min_throttle = 100.0
             if relevant_indices != None and matched_info != None:
+                print('Lidar: Found risk objects')
                 for i in relevant_indices:
                     dist, sp, pos, dir = matched_info[i]
                     throttle, brake = sc.lidar_speed_control(dist, curr_speed, curr_speed - sp)
@@ -126,6 +134,7 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, tim
                         max_brake = brake
                         min_throttle = throttle
 
+            print(f'Lidar: Throttle: {min_throttle}, Brake: {max_brake}')
             with cam_last_brake.get_lock():
                 if cam_last_brake.Value <= max_brake or curr_speed < 11.111:
                     socket.send_data(b'I', np.array([min_throttle, max_brake], dtype=np.float32))
@@ -153,8 +162,11 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
         brake = 0.0
 
         while not quit_event.is_set():
+            print('USS: Waiting...')
             uss_event.wait()
             uss_event.clear()
+
+            print('USS: Processing...')
             with uss.get_lock():
                 curr_time = timestamp.Value
                 curr_data = np.frombuffer(uss.get_obj(), dtype=np.float32, count=6)
@@ -184,8 +196,10 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
                                 dist = rel_data[i] - 0.1
                                 break
 
+                        print(f'USS: Max closing speed: {max_speed}')
                         throttle, brake = sc.uss_speed_control(dist, max_speed)
 
+            print(f'USS: Throttle: {throttle}, Brake: {brake}')
             socket.send_data(b'I', np.array([throttle, brake], dtype=np.float32))
 
             prev_data = rel_data
@@ -203,11 +217,15 @@ def blind_process(init_event, quit_event, blind, blind_event):
         curr_data = np.array(2, dtype=np.float32)
 
         while not quit_event.is_set():
+            print('Blind: Waiting...')
             blind_event.wait()
             blind_event.clear()
+
+            print('Blind: Processing...')
             with blind.get_lock():
                 curr_data = np.frombuffer(blind.get_obj(), dtype=np.float32, count=2)
 
+            print(f'Left dist: {curr_data[0]}, Right dist: {curr_data[1]}')
             socket.send_data(b'B', np.array([int(curr_data[0] < 2), int(curr_data[1] < 2)], dtype=np.uint32))
     except Exception as e:
         print(e)

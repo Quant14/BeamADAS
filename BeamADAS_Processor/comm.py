@@ -36,7 +36,9 @@ class Comm:
 
         data_type = struct.unpack('>B', recv)
 
-        if data_type == 'L':
+        if data_type == b'S':
+            data_len = 4
+        elif data_type == 'L':
             recv = self.conn.recv(16)
             if len(recv) < 16: return None, None, None, None, None, None
 
