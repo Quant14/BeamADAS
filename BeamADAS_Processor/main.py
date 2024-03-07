@@ -7,16 +7,19 @@ import numpy as np
 import multiprocessing as mp
 import math
 import struct
+import traceback
 
 # MAIN PROCESS ---------------------------------
 def main_process(init_event, quit_event, speed, cam, cam_event, lidar, lidar_size, veh_dir, cam_timestamp, timestamp, lidar_event, uss, uss_event, gear, blind, blind_event, cam_last_brake, lidar_last_brake):
     socket = comm.Comm(0)
     try:
         while True:
+            print('Waiting for message...')
             data_type, data_len, curr_time, curr_dir, curr_gear, data = socket.recv_data()
 
             if data_type != None and data != None:
-                if data_type == 'S':
+                if data_type == b'S':
+                    print('Recv speed')
                     with speed.get_lock():
                         speed.Value = struct.unpack('>f', data)
                         with cam_last_brake.get_lock() and lidar_last_brake.get_lock():
@@ -25,41 +28,48 @@ def main_process(init_event, quit_event, speed, cam, cam_event, lidar, lidar_siz
                                 lidar_last_brake.Value = 0
                             elif speed.Value < 11.111:
                                 lidar_last_brake.Value = 0
-                elif data_type == 'B':
+                elif data_type == b'B':
+                    print('Recv blind')
                     with blind.get_lock():
                         blind[:] = data
                     blind_event.set()
-                elif data_type == 'C':
+                elif data_type == b'C':
+                    print('Recv cam')
                     with cam.get_lock():
                         cam[:] = data
                         cam_timestamp.Value = curr_time
                     cam_event.set()
-                elif data_type == 'L':
+                elif data_type == b'L':
+                    print('Recv lidar')
                     with lidar.get_lock():
                         timestamp.Value = curr_time
                         veh_dir[:] = curr_dir
                         lidar[:data_len] = data
                         lidar_size.Value = data_len
                     lidar_event.set()
-                elif data_type == 'P':
+                elif data_type == b'P':
+                    print('Recv park')
                     with uss.get_lock():
                         uss[:] = data
                         timestamp.Value = curr_time
                         gear.Value = curr_gear
                     uss_event.set()
-                elif data_type == 'I':
+                elif data_type == b'I':
+                    print('Recv init')
                     init_event.set()
-                elif data_type == 'Q':
+                elif data_type == b'Q':
+                    print('Recv quit')
                     quit_event.set()
 
     except Exception as e:
-        print(e)
+        traceback.print_exc()
     finally:
         socket.close()
 
 # CAM PROCESS ----------------------------------
 def cam_process(init_event, quit_event, speed, cam, timestamp, event, cam_last_brake, lidar_last_brake):
     init_event.wait()
+    print('Cam starting')
     lc = LaneCurve()
     socket = comm.Comm(1)
     try:
@@ -89,13 +99,14 @@ def cam_process(init_event, quit_event, speed, cam, timestamp, event, cam_last_b
                     cam_last_brake.Value = brake
 
     except Exception as e:
-        print(e)
+        traceback.print_exc()
     finally:
         socket.close()
 
 # LIDAR PROCESS --------------------------------
 def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, timestamp, lidar_event, cam_last_brake, lidar_last_brake):
     init_event.wait()
+    print('Lidar starting')
     socket = comm.Comm(2)
     try:
         curr_speed = 0.0
@@ -134,13 +145,14 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, tim
                 lidar_last_brake.Value = max_brake
 
     except Exception as e:
-        print(e)
+        traceback.print_exc()
     finally:
         socket.close()
 
 # USS PROCESS ----------------------------------
 def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
     init_event.wait()
+    print('USS starting')
     socket = comm.Comm(3)
     try:
         curr_time = 0.0
@@ -191,13 +203,14 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
             prev_data = rel_data
             prev_time = curr_time
     except Exception as e:
-        print(e)
+        traceback.print_exc()
     finally:
         socket.close()
 
 # BLIND PROCESS --------------------------------
 def blind_process(init_event, quit_event, blind, blind_event):
     init_event.wait()
+    print('Blind starting')
     socket = comm.Comm(4)
     try:
         curr_data = np.array(2, dtype=np.float32)
@@ -210,7 +223,7 @@ def blind_process(init_event, quit_event, blind, blind_event):
 
             socket.send_data(b'B', np.array([int(curr_data[0] < 2), int(curr_data[1] < 2)], dtype=np.uint32))
     except Exception as e:
-        print(e)
+        traceback.print_exc()
     finally:
         socket.close()
 
@@ -225,7 +238,7 @@ def main():
         cam_last_brake = mp.Value('f', 0.0, lock=True)
 
         lidar = mp.Array('f', 2400, lock=True)
-        lidar_size = mp.Value('I', 0)
+        lidar_size = mp.Value('i', 0)
         veh_dir = mp.Array('f', 2)
         timestamp = mp.Value('f', 0.0)
         lidar_event = mp.Event()
@@ -233,7 +246,7 @@ def main():
 
         uss = mp.Array('f', 6, lock=True)
         uss_event = mp.Event()
-        gear = mp.Value('B', b'N')
+        gear = mp.Value('c', b'N')
 
         blind = mp.Array('f', 2, lock=True)
         blind_event = mp.Event()
@@ -263,7 +276,7 @@ def main():
 
         print('All systems shut down')
     except Exception as e:
-        print(e)
+        traceback.print_exc()
     finally:
         print('done')
 

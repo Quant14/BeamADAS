@@ -15,9 +15,8 @@ class Comm:
             self.conn, self.addr = self.socket.accept()
             print("Connected")
         else:
-            time.sleep(3)
-
-            self.socket.connect(("!!!host_ip!!!", 4441 + proc))
+            print('Connecting to host...')
+            self.socket.connect(("169.254.154.43", 4441 + proc))
 
     def send_data(self, type, data):
         if type == b'I':
@@ -34,30 +33,33 @@ class Comm:
         veh_dir = [0.0, 0.0]
         gear = 'N'
 
-        data_type = struct.unpack('>B', recv)
+        data_type = struct.unpack('>c', recv)[0]
 
-        if data_type == 'L':
+        print(data_type)
+
+        if data_type == b'L':
             recv = self.conn.recv(16)
             if len(recv) < 16: return None, None, None, None, None, None
 
             data_len, timestamp, veh_dir[0], veh_dir[1] = struct.unpack('>Ifff', recv)
-        elif data_type == 'P':
+        elif data_type == b'P':
             recv = self.conn.recv(5)
             if len(recv) < 5: return None, None, None, None, None, None
 
-            timestamp, gear = struct.unpack('>fB', recv)
+            timestamp, gear = struct.unpack('>fc', recv)
             data_len = 24
-        elif data_type == 'C':
+        elif data_type == b'C':
             recv = self.conn.recv(4)
             if len(recv) < 4: return None, None, None, None, None, None
 
             data_len = 921600
-            timestamp = struct.unpack('>f', recv)
+            timestamp = struct.unpack('>f', recv)[0]
         else:
             recv = self.conn.recv(4)
             if len(recv) < 4: return None, None, None, None, None, None
 
-            data_len = struct.unpack('>I', recv)
+            data_len = struct.unpack('>I', recv)[0]
+            print(data_len)
 
         data = b''
         read_len = 0
@@ -65,6 +67,7 @@ class Comm:
             data += self.conn.recv(data_len - read_len)
             read_len = len(data)
 
+        print(data)
         return data_type, data_len, timestamp, veh_dir, gear, data
 
     def close(self):

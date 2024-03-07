@@ -3,12 +3,17 @@ import time
 
 from lco import LaneCurve
 
-lc = LaneCurve()
-res = []
+import socket
 
-for i in range(0, 3, 3):
-    radius = lc.lane_pipeline(cv2.imread(f'./sp1/sample2/cam/img{i}.png', cv2.IMREAD_GRAYSCALE), 1.0)
-    print('estimated radius: ' + str(radius))
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect(("169.254.154.43", 4442))
+
+# lc = LaneCurve()
+# res = []
+
+# for i in range(0, 3, 3):
+#     radius = lc.lane_pipeline(cv2.imread(f'./sp1/sample2/cam/img{i}.png', cv2.IMREAD_GRAYSCALE), 1.0)
+#     print('estimated radius: ' + str(radius))
 # time.sleep(1)
 
 # print(time.time())
