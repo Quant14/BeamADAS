@@ -37,7 +37,9 @@ class Comm:
 
         print(data_type)
 
-        if data_type == b'L':
+        if data_type == b'S':
+            data_len = 4
+        elif data_type == b'L':
             recv = self.conn.recv(16)
             if len(recv) < 16: return None, None, None, None, None, None
 
