@@ -20,9 +20,10 @@ class Comm:
 
     def send_data(self, type, data):
         if type == b'I':
-            self.socket.sendall(struct.pack('>Bff', type, data[0], data[1]))
+            self.socket.sendall(struct.pack('>cff', type, data[0], data[1]))
+            print(data)
         elif type == b'B':
-            self.socket.sendall(struct.pack('>BII', type, data[0], data[1]))
+            self.socket.sendall(struct.pack('>c??', type, data[0], data[1]))
 
     def recv_data(self):
         recv = self.conn.recv(1)
@@ -35,7 +36,7 @@ class Comm:
 
         data_type = struct.unpack('>c', recv)[0]
 
-        print(data_type)
+        # print(data_type)
 
         if data_type == b'S':
             data_len = 4
@@ -61,7 +62,6 @@ class Comm:
             if len(recv) < 4: return None, None, None, None, None, None
 
             data_len = struct.unpack('>I', recv)[0]
-            print(data_len)
 
         data = b''
         read_len = 0
@@ -69,9 +69,10 @@ class Comm:
             data += self.conn.recv(data_len - read_len)
             read_len = len(data)
 
-        print(data)
+        # print(data)
         return data_type, data_len, timestamp, veh_dir, gear, data
 
     def close(self):
-        self.conn.close()
+        if self.proc == 0:
+            self.conn.close()
         self.socket.close()
