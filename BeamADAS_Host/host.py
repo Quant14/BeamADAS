@@ -203,48 +203,54 @@ def init(sp, ai, traffic, launch):
     return home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer
 
 def destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer):
-    if camera:
-        camera.remove()
-        lidar.remove()
-        uss_f.remove()
-        uss_fl.remove()
-        uss_fr.remove()
-        uss_r.remove()
-        uss_rl.remove()
-        uss_rr.remove()
-        uss_left.remove()
-        uss_right.remove()
-        vehicle.detach_sensor('electrics')
-        electrics.detach(vehicle, 'electrics')
-        electrics.disconnect(bng, vehicle)
-        vehicle.detach_sensor('timer')
-        timer.detach(vehicle, 'timer')
-        timer.disconnect(bng, vehicle)
+    camera.remove()
+    lidar.remove()
+    uss_f.remove()
+    uss_fl.remove()
+    uss_fr.remove()
+    uss_r.remove()
+    uss_rl.remove()
+    uss_rr.remove()
+    uss_left.remove()
+    uss_right.remove()
+    vehicle.detach_sensor('electrics')
+    electrics.detach(vehicle, 'electrics')
+    electrics.disconnect(bng, vehicle)
+    vehicle.detach_sensor('timer')
+    timer.detach(vehicle, 'timer')
+    timer.disconnect(bng, vehicle)
     bng.close()
     home.close()
 
 def send_data(socket, type, timestamp, dir, gear, data):
     if type == b'S':
         socket.sendall(struct.pack('>cf', type, data))
-    if type == b'C':
+    elif type == b'C':
         socket.sendall(struct.pack('>cf', type, timestamp) + data)
     elif type == b'L':
         socket.sendall(struct.pack('>cIfff', type, len(data), timestamp, dir[0], dir[1]) + data)
     elif type == b'P':
-        socket.sendall(struct.pack('>cfB', type, timestamp, gear) + data)
+        socket.sendall(struct.pack('>cfc', type, timestamp, gear) + data)
     else:
         socket.sendall(struct.pack('>cI', type, len(data)) + data)
 
 def recv_data(socket):
-    data_len = socket.recv(5)
-    if len(data_len) < 5: return None, None, None
+    try:
+        recv = socket.recv(1)
+    except socket.timeout:
+        return None, None, None
+    if len(recv) < 1: return None, None, None
 
-    data_type, data_len = struct.unpack('>cI', data_len)
-    read_len = 0
-    data = b''
+    data_type = struct.unpack('>c', recv)[0]
+    response_1 = None
+    response_2 = None
 
-    while data_len > read_len:
-        data += self.conn.recv(data_len - read_len)
-        read_len = len(data)
-
-    return data_type, data_len, data
+    if data_type == b'I':
+        recv = socket.recv(8)
+        if len(recv) < 8: return None, None, None
+        response_1, response_2 = struct.unpack('>ff', recv)
+    elif data_type == b'B':
+        recv = socket.recv(2)
+        if len(recv) < 2: return None, None, None
+        response_1, response_2 = struct.unpack('>??', recv)
+    return data_type, response_1, response_2

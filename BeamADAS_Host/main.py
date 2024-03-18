@@ -58,7 +58,7 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
             vehicle.sensors.poll('electrics')
             speed = electrics.data['wheelspeed']
 
-            host.send_data(socket, b'S', None, None, None, speed.tobytes())
+            host.send_data(socket, b'S', None, None, None, speed)
 
             # Get ADAS sensors data
             if speed >= 8.333 and not electrics.data['hazard_signal'] and not electrics.data['left_signal'] and not electrics.data['right_signal']: # Speed for LiDAR
@@ -68,7 +68,10 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
                 direction = vehicle.state['dir']
 
                 lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
-                lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
+
+                new_shape = (len(lidar_data) // 3, 3)
+                lidar_data = lidar_data[:np.prod(new_shape)]
+                lidar_data = lidar_data.reshape(new_shape)
 
                 transform = np.identity(4)
                 transform[:3, 3] = -pos
@@ -77,7 +80,7 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
                 lidar_data = np.dot(lidar_data, transform.T)[:, :3]
 
                 lidar_data = lidar_data[np.dot(lidar_data, direction) >= 0].astype(np.float32)
-
+                direction = np.array(direction[:2], dtype=np.float32)
                 host.send_data(socket, b'L', timer['time'], direction[:2], None, lidar_data.tobytes())
                 adas_state = 3
 
@@ -96,13 +99,13 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
                     vehicle.sensors.poll('electrics', 'timer')
                     park_data = np.array([uss_f.stream()[0], uss_fl.stream()[0], uss_fr.stream()[0],
                             uss_r.stream()[0], uss_rl.stream()[0], uss_rr.stream()[0]], dtype=np.float32)
-                    host.send_data(socket, b'P', timer['time'], None, electrics.data['gear'], park_data)
+                    host.send_data(socket, b'P', timer['time'], None, electrics.data['gear'].encode(), park_data.tobytes())
                     adas_state = 3
 
                 if second % 6 == 0:
                     # Blind spot detection
-                    blind_data = [uss_left.stream(), uss_right.stream()]
-                    host.send_data(socket, b'B', None, None, None, blind_data)
+                    blind_data = np.array([uss_left.stream(), uss_right.stream()], dtype=np.float32)
+                    host.send_data(socket, b'B', None, None, None, blind_data.tobytes())
 
                 if second % 30 == 0:
                     if prev_state == 3 and adas_state == 2:
@@ -117,51 +120,55 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
     except Exception as e:
         traceback.print_exc()
     finally:
-        socket.close()
+        host.send_data(socket, b'Q', None, None, None, b'')
         exit_event.set()
         print('Exiting...')
-        host.send_data(socket, b'Q', None, None, None, b'')
         adas_state = 0
         time.sleep(3)
+        socket.close()
         host.destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer)
 
 def receiver(proc, ready_event, ready_back_event, exit_event):
     try:
-        print('Waiting for sender...')
+        print(f'Receiver {proc} waiting for sender...')
         ready_event.wait()
         print(f'Starting receiver {proc}...')
         time.sleep(random.random() % 2)
         home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp0', False, False, False)
 
-        print('Opening connection...')
+        print(f'Receiver {proc} opening connection...')
 
         socket = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
         socket.bind(('0.0.0.0', 4441 + proc))
         ready_back_event.set()
         print('Waiting for connection...')
         socket.listen()
+        socket.settimeout(20)
         conn, addr = socket.accept()
-        print('Receiver operational...')
-        while True:
-            if exit_event.is_set():
-                break
-            adas_response, response_type = host.recv_data(conn)
-
-            if response_type == 'I':
-                adas_response = np.frombuffer(adas_response, dtype=np.float_)
-                vehicle.control(throttle=adas_response[0])
-                vehicle.control(brake=adas_response[1])
-            elif response_type == 'B':
-                adas_response = np.frombuffer(adas_response, dtype=np.uint32)
-                if adas_response[0]:
+        print(f'Receiver {proc} operational...')
+        while not exit_event.is_set():
+            t = time.time()
+            response_type, response_1, response_2 = host.recv_data(conn)
+            if time.time() - t >= 20:
+                if exit_event.is_set():
+                    break
+                else:
+                    continue
+            if response_type == b'I':
+                # print('Braking!')
+                vehicle.control(throttle=response_1)
+                vehicle.control(brake=response_2)
+            elif response_type == b'B':
+                # print('Checking blind spots')
+                if response_1:
                     print('blind spot left')
-                if adas_response[1]:
+                if response_2:
                     print('blind spot right')
     except Exception as e:
         traceback.print_exc()
     finally:
-        print('Exiting...')
-        host.destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer)
+        print(f'Receiver {proc} exiting...')
+        socket.close()
 
 def main():
     ready_event = Event()

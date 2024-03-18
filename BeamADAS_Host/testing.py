@@ -6,6 +6,7 @@ import cv2
 import sys
 import os
 import time
+import struct
 import matplotlib.pyplot as plt
 import numpy as np
 from decimal import Decimal, ROUND_HALF_UP
@@ -19,6 +20,9 @@ from beamngpy.tools import OpenDriveExporter
 
 # dirs = ['sp1', 'sp1_no_traffic', 'sp2', 'sp2_no_traffic']
 # dirs = ['sp2_no_traffic']
+
+a = [1, 2, 3]
+a = np.reshape(a, (1, 3))
 
 home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp0', False, False, True)
 vehicle.sensors.poll('electrics', 'timer', 'state')
