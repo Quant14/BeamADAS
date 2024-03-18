@@ -90,12 +90,17 @@ class ObjectDetect:
     def lidar_pipeline(self, lidar_data, timestamp, speed, dir):
         cluster_data = self.find_clusters(lidar_data)
 
-        if self.timestamp_prev != 0.0 and timestamp - self.timestamp_prev <= 1:
-            matched_info = self.match_and_track(cluster_data, timestamp - self.timestamp_prev, speed)
-            relevant_indices = self.analyze_relevancy(matched_info, dir)
-            self.timestamp_prev = timestamp
-            return matched_info, relevant_indices
-        else:
-            self.centroids_prev = np.array([np.mean(obj, axis=0) for obj in cluster_data])
-            self.timestamp_prev = timestamp
-            return None, None
+        if len(cluster_data) > 0:
+            print(f'Clusters: {len(cluster_data)}')
+            if self.timestamp_prev != 0.0 and timestamp - self.timestamp_prev <= 1:
+                matched_info = self.match_and_track(cluster_data, timestamp - self.timestamp_prev, speed)
+                print(f'Matched: {len(matched_info)}')
+                relevant_indices = self.analyze_relevancy(matched_info, dir)
+                print(f'Relevant: {len(relevant_indices)}')
+                self.timestamp_prev = timestamp
+                return matched_info, relevant_indices
+            else:
+                self.centroids_prev = np.array([np.mean(obj, axis=0) for obj in cluster_data])
+                self.timestamp_prev = timestamp
+                return None, None
+        return None, None
