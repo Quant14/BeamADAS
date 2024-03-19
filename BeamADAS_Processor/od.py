@@ -19,11 +19,11 @@ class ObjectDetect:
             segment_data = lidar_data[segment_criteria]
             if len(segment_data) > 0:
                 if i == 0:
-                    dbscan = DBSCAN(eps=0.5, min_samples=30, n_jobs=1, algorithm='ball_tree') # near
+                    dbscan = DBSCAN(eps=0.6, min_samples=25, n_jobs=1, algorithm='ball_tree') # near
                 elif i == 1:
-                    dbscan = DBSCAN(eps=1, min_samples=12, n_jobs=1, algorithm='ball_tree') # middle
+                    dbscan = DBSCAN(eps=1.2, min_samples=15, n_jobs=1, algorithm='ball_tree') # middle
                 else:
-                    dbscan = DBSCAN(eps=1.5, min_samples=8, n_jobs=1, algorithm='ball_tree') # far
+                    dbscan = DBSCAN(eps=1.3, min_samples=10, n_jobs=1, algorithm='ball_tree') # far
 
                 clusters = dbscan.fit_predict(segment_data)
                 for cluster_id in np.unique(clusters[clusters != -1]):
@@ -40,8 +40,8 @@ class ObjectDetect:
         thresh = elapsed * speed * 2
 
         distances = np.linalg.norm(self.centroids_prev[:, np.newaxis, :] - centroids, axis=2)
-
-        row_ind, col_ind = linear_sum_assignment(distances <= thresh)
+        filtered_dist = distances[np.where(distances[:, 0] < thresh)[0]]
+        row_ind, col_ind = linear_sum_assignment(filtered_dist)
         matched_clusters = np.column_stack((row_ind, col_ind))
 
         matched_info = [] # [[distance, speed, position, direction], [...], ...]
@@ -49,13 +49,16 @@ class ObjectDetect:
         for i, j in matched_clusters:
             prev_cluster = self.centroids_prev[i][:2]
             curr_cluster = centroids[j][:2]
+            # print(f'CLUSTER POS: {centroids[j]}')
 
-            movement_vector = prev_cluster - curr_cluster
+            movement_speed = distances[i, j] / elapsed
 
-            matched_info.append((np.linalg.norm(curr_cluster),
-                                 distances[i, j] / elapsed,
-                                 curr_cluster,
-                                 movement_vector[:2]))
+            if movement_speed < 120:
+                movement_vector = curr_cluster - prev_cluster
+                matched_info.append((np.linalg.norm(curr_cluster),
+                                    movement_speed,
+                                    curr_cluster,
+                                    movement_vector[:2]))
 
         self.centroids_prev = centroids
 
@@ -71,6 +74,7 @@ class ObjectDetect:
 
         for dist, sp, pos, dir in matched_info:
             if np.dot(dir / np.linalg.norm(dir), veh_dir) > -0.7:
+            #    print(f'Veh dir: {veh_dir}')
                continue
             A1 = -dir[1]
             B1 = dir[0]
@@ -80,8 +84,9 @@ class ObjectDetect:
 
             intersection = [(C1 * B - C * B1) / det, (C * A1 - C1 * A) / det]
 
-            if np.linalg.norm(intersection) <= 2.0:
-                np.append(relevant_indices, i)
+            print(np.linalg.norm(intersection))
+            if np.linalg.norm(intersection) <= 2.5:
+                relevant_indices = np.append(relevant_indices, i)
 
             i += 1
 
@@ -91,10 +96,13 @@ class ObjectDetect:
         cluster_data = self.find_clusters(lidar_data)
 
         if len(cluster_data) > 0:
-            print(f'Clusters: {len(cluster_data)}')
+            # print(f'Clusters: {len(cluster_data)}')
             if self.timestamp_prev != 0.0 and timestamp - self.timestamp_prev <= 1:
                 matched_info = self.match_and_track(cluster_data, timestamp - self.timestamp_prev, speed)
-                print(f'Matched: {len(matched_info)}')
+                # print(f'Matched: {len(matched_info)}')
+                for matched in matched_info:
+                    dist, sp, pos, direction = matched
+                    print(f'\nDistance: {dist}\nSpeed: {sp}\nPosition: {pos}\nDirection: {direction}\nVehicle direction: {dir}')
                 relevant_indices = self.analyze_relevancy(matched_info, dir)
                 print(f'Relevant: {len(relevant_indices)}')
                 self.timestamp_prev = timestamp

@@ -80,7 +80,7 @@ def cam_process(init_event, quit_event, speed, cam, timestamp, event, cam_last_b
     try:
         curr_time = 0.0
         while not quit_event.is_set():
-            print('Cam: Waiting...')
+            # print('Cam: Waiting...')
             t = time.time()
             event.wait(timeout=wait_timeout)
             if time.time() - t >= wait_timeout:
@@ -90,7 +90,7 @@ def cam_process(init_event, quit_event, speed, cam, timestamp, event, cam_last_b
                     continue
             event.clear()
 
-            print('Cam: Processing...')
+            # print('Cam: Processing...')
             with cam.get_lock():
                 img = np.frombuffer(cam.get_obj(), dtype=np.uint8).reshape((720, 1280))
                 curr_time = timestamp.value
@@ -156,7 +156,7 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, tim
             max_brake = 0.0
             min_throttle = 100.0
             if (relevant_indices is not None and matched_info is not None) and (len(relevant_indices) > 0 and len(matched_info) > 0):
-                print('Lidar: Found risk objects')
+                # print('Lidar: Found risk objects')
                 for i in relevant_indices:
                     dist, sp, pos, dir = matched_info[i]
                     throttle, brake = sc.lidar_speed_control(dist, curr_speed, curr_speed - sp)
@@ -166,11 +166,11 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, tim
 
             print(f'Lidar: Throttle: {min_throttle}, Brake: {max_brake}')
             with cam_last_brake.get_lock():
+                with lidar_last_brake.get_lock():
+                    max_brake = (max_brake + lidar_last_brake.value) / 2 # avg
+                    lidar_last_brake.value = max_brake
                 if cam_last_brake.value <= max_brake or curr_speed < 11.111:
                     socket.send_data(b'I', np.array([min_throttle, max_brake], dtype=np.float32))
-
-            with lidar_last_brake.get_lock():
-                lidar_last_brake.value = max_brake
 
     except Exception as e:
         traceback.print_exc()
@@ -194,7 +194,7 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
         brake = 0.0
 
         while not quit_event.is_set():
-            print('USS: Waiting...')
+            # print('USS: Waiting...')
             t = time.time()
             uss_event.wait(timeout=wait_timeout)
             if time.time() - t >= wait_timeout:
@@ -204,7 +204,7 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
                     continue
             uss_event.clear()
 
-            print('USS: Processing...')
+            # print('USS: Processing...')
             with uss.get_lock():
                 curr_time = timestamp.value
                 curr_gear = gear.value
@@ -319,24 +319,22 @@ def main():
         blind_proc = mp.Process(target=blind_process, args=(init_event, quit_event, blind, blind_event))
 
         main_proc.start()
-        # cam_proc.start()
+        cam_proc.start()
         lidar_proc.start()
-        # uss_proc.start()
-        # blind_proc.start()
+        uss_proc.start()
+        blind_proc.start()
 
         print('All systems started')
 
         main_proc.join()
-        # cam_proc.join()
+        cam_proc.join()
         lidar_proc.join()
-        # uss_proc.join()
-        # blind_proc.join()
+        uss_proc.join()
+        blind_proc.join()
 
         print('All systems shut down')
     except Exception as e:
         traceback.print_exc()
-    finally:
-        print('done')
 
 if __name__ == '__main__':
     main()
