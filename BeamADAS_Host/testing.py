@@ -21,32 +21,30 @@ from beamngpy.tools import OpenDriveExporter
 # dirs = ['sp1', 'sp1_no_traffic', 'sp2', 'sp2_no_traffic']
 # dirs = ['sp2_no_traffic']
 
-a = [1, 2, 3]
-a = np.reshape(a, (1, 3))
-
 home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp0', False, False, True)
 vehicle.sensors.poll('electrics', 'timer', 'state')
 
-vehicle.sensors.poll('state', 'timer')
-lidar_data_readonly = lidar.stream()
-pos = np.array([vehicle.state['pos'][0], vehicle.state['pos'][1] - 2.25, vehicle.state['pos'][2] + 0.6])
-direction = vehicle.state['dir']
+while electrics.data['running']:
+    vehicle.sensors.poll('state', 'timer')
+# lidar_data_readonly = lidar.stream()
+# pos = np.array([vehicle.state['pos'][0], vehicle.state['pos'][1] - 2.25, vehicle.state['pos'][2] + 0.6])
+# direction = vehicle.state['dir']
 
-lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
-lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
+# lidar_data = lidar_data_readonly.copy()[:np.where(lidar_data_readonly == 0)[0][0]]
+# lidar_data = lidar_data.reshape((len(lidar_data) // 3, 3))
 
-transform = np.identity(4)
-transform[:3, 3] = -pos
+# transform = np.identity(4)
+# transform[:3, 3] = -pos
 
-lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
-lidar_data = np.dot(lidar_data, transform.T)[:, :3]
+# lidar_data = np.column_stack((lidar_data, np.ones(len(lidar_data))))
+# lidar_data = np.dot(lidar_data, transform.T)[:, :3]
 
-lidar_data = lidar_data[np.dot(lidar_data, direction) >= 0]
+# lidar_data = lidar_data[np.dot(lidar_data, direction) >= 0]
 
-print(lidar_data.shape)
-print(len(lidar_data.tobytes()))
-print(lidar_data)
-print(lidar_data.astype(np.float32))
+# print(lidar_data.shape)
+# print(len(lidar_data.tobytes()))
+# print(lidar_data)
+# print(lidar_data.astype(np.float32))
 # while electrics.data['running']:
 #     vehicle.sensors.poll('electrics')
 #     time.sleep(1)

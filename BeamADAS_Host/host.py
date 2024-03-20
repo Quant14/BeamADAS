@@ -19,17 +19,19 @@ def init(sp, ai, traffic, launch):
     if launch:
         # Create vehicles
         vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.31, 0.33, 0.24, 1))
+        vehicle2 = Vehicle('lidar_vehicle', model='etki', license='LIDAR', color=(0.5, 0.5, 0.5, 1))
 
         # Load map and spawn vehicle
         if sp == 'sp1' or sp == 'sp1_no_traffic':
-            scenario = Scenario('italy', 'test')
+            scenario = Scenario('italy', 'BeamADAS')
             scenario.add_vehicle(vehicle, pos=(1216.629, -824.389, 145.414), rot_quat=(-0.014, 0.012, -0.518, 0.855)) # SP1
         elif sp == 'sp2' or sp == 'sp2_no_traffic':
-            scenario = Scenario('italy', 'test')
+            scenario = Scenario('italy', 'BeamADAS')
             scenario.add_vehicle(vehicle, pos=(-1331.383, 1565.515, 152.679), rot_quat=(0, 0.005, 0.639, 0.769)) # SP2
         elif sp == 'sp0':
-            scenario = Scenario('smallgrid', 'test')
+            scenario = Scenario('smallgrid', 'BeamADAS')
             scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
+            scenario.add_vehicle(vehicle2, pos=(0, -150, 0.206))
 
         # Load scenario
         scenario.make(bng)
@@ -152,7 +154,7 @@ def init(sp, ai, traffic, launch):
                         requested_update_time=0.06,
                         pos=(0.95, -0.4, 0.95),
                         dir=(0.6, 0.4, 0),
-                        field_of_view_y=60,
+                        field_of_view_y=45,
                         near_far_planes=(0.1, 3.0),
                         range_min_cutoff=0.1,
                         range_direct_max_cutoff=3.0,
@@ -165,7 +167,7 @@ def init(sp, ai, traffic, launch):
                         requested_update_time=0.06,
                         pos=(-0.95, -0.4, 0.95),
                         dir=(-0.6, 0.4, 0),
-                        field_of_view_y=60,
+                        field_of_view_y=45,
                         near_far_planes=(0.1, 3.0),
                         range_min_cutoff=0.1,
                         range_direct_max_cutoff=3.0,
