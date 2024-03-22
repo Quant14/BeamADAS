@@ -14,7 +14,7 @@ import traceback
 import random
 
 def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, ready_blind_event, exit_event):
-    home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp0', False, False, True)
+    home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp1', False, False, True)
 
     adas_state = 0 # states: 0 = off, 1 = on, 2 = ready, 3 = active
     prev_state = 0
@@ -61,7 +61,7 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
             host.send_data(socket, b'S', None, None, None, speed)
 
             # Get ADAS sensors data
-            if speed >= 8.333 and not electrics.data['hazard_signal'] and not electrics.data['left_signal'] and not electrics.data['right_signal']: # Speed for LiDAR
+            if speed > 5.555 and not electrics.data['hazard_signal'] and not electrics.data['left_signal'] and not electrics.data['right_signal']: # Speed for LiDAR
                 vehicle.sensors.poll('state', 'timer')
                 lidar_data_readonly = lidar.stream()
                 pos = np.array([vehicle.state['pos'][0], vehicle.state['pos'][1] - 2.25, vehicle.state['pos'][2] + 0.6])
@@ -85,7 +85,7 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
                 adas_state = 3
 
             if second % 2 == 0:
-                if speed >= 11.111 and not electrics.data['hazard_signal'] and not electrics.data['left_signal'] and not electrics.data['right_signal']: # Speed for camera
+                if speed > 11.111 and not electrics.data['hazard_signal'] and not electrics.data['left_signal'] and not electrics.data['right_signal']: # Speed for camera
                     vehicle.sensors.poll('timer')
                     camera_data = camera.stream_colour(3686400)
                     camera_data = np.array(camera_data).reshape(height, width, 4)
@@ -95,7 +95,7 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
 
                     host.send_data(socket, b'C', timer['time'], None, None, img)
                     adas_state = 3
-                elif speed <= 3.333: # Parking speed
+                elif speed < 5.555: # Parking speed
                     vehicle.sensors.poll('electrics', 'timer')
                     park_data = np.array([uss_f.stream()[0], uss_fl.stream()[0], uss_fr.stream()[0],
                             uss_r.stream()[0], uss_rl.stream()[0], uss_rr.stream()[0]], dtype=np.float32)
