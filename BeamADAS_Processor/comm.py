@@ -33,31 +33,32 @@ class Comm:
         timestamp = 0.0
         veh_dir = [0.0, 0.0]
         gear = 'N'
+        accX = 0.0
 
         data_type = struct.unpack('>B', recv)
 
         if data_type == b'S':
             data_len = 4
         elif data_type == 'L':
-            recv = self.conn.recv(16)
-            if len(recv) < 16: return None, None, None, None, None, None
+            recv = self.conn.recv(20)
+            if len(recv) < 20: return None, None, None, None, None, None, None
 
-            data_len, timestamp, veh_dir[0], veh_dir[1] = struct.unpack('>Ifff', recv)
+            data_len, timestamp, veh_dir[0], veh_dir[1], accX = struct.unpack('>Iffff', recv)
         elif data_type == 'P':
             recv = self.conn.recv(5)
-            if len(recv) < 5: return None, None, None, None, None, None
+            if len(recv) < 5: return None, None, None, None, None, None, None
 
             timestamp, gear = struct.unpack('>fB', recv)
             data_len = 24
         elif data_type == 'C':
             recv = self.conn.recv(4)
-            if len(recv) < 4: return None, None, None, None, None, None
+            if len(recv) < 4: return None, None, None, None, None, None, None
 
             data_len = 921600
             timestamp = struct.unpack('>f', recv)
         else:
             recv = self.conn.recv(4)
-            if len(recv) < 4: return None, None, None, None, None, None
+            if len(recv) < 4: return None, None, None, None, None, None, None
 
             data_len = struct.unpack('>I', recv)
 
@@ -67,7 +68,7 @@ class Comm:
             data += self.conn.recv(data_len - read_len)
             read_len = len(data)
 
-        return data_type, data_len, timestamp, veh_dir, gear, data
+        return data_type, data_len, timestamp, veh_dir, gear, accX, data
 
     def close(self):
         self.conn.close()
