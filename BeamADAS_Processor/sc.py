@@ -22,8 +22,11 @@ def lidar_speed_control(dist, speed, target):
     return 100, 0
 
 def uss_speed_control(dist, speed):
-    brake = np.clip(speed * speed / (2 * dist) / 100, 0.0, 1.0)
-    if brake >= 75:
+    if dist < 0.1:
+        return 0, 100
+    brake = np.clip((speed * speed / (2 * dist)) * 0.0981, 0.0, 1.0)
+    # print(f'USS brake: {brake}')
+    if brake >= 0.3:
         return 0, brake
 
     return 100, 0
