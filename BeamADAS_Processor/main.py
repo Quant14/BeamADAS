@@ -100,14 +100,15 @@ def cam_process(init_event, quit_event, speed, cam, timestamp, event, cam_last_b
 
             radius = lc.lane_pipeline(img, curr_time)
             if radius != None:
-                max_speed = math.sqrt(4.905 * radius) * (3.6 + 0.4) # type: ignore
-                print(f'Cam: Max speed: {max_speed}')
+                max_speed = math.sqrt(4.905 * radius) # type: ignore
+                # print(f'Cam: Max speed: {max_speed}')
 
                 throttle, brake = sc.cam_speed_control(5, curr_speed, max_speed)
-                print(f'Cam: Throttle: {throttle}, Brake: {brake}')
+                # print(f'Cam: Throttle: {throttle}, Brake: {brake}')
 
                 with lidar_last_brake.get_lock():
                     if lidar_last_brake.value <= brake:
+                        brake = (brake + cam_last_brake.value) / 2 # avg
                         socket.send_data(b'I', np.array([throttle, brake], dtype=np.float32))
 
                 with cam_last_brake.get_lock():

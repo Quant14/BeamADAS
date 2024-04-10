@@ -37,7 +37,7 @@ class ObjectDetect:
     def match_and_track(self, cluster_data, elapsed, speed):
         centroids = np.array([np.mean(obj, axis=0) for obj in cluster_data])
 
-        thresh = elapsed * speed * 2
+        thresh = elapsed * speed
 
         distances = np.linalg.norm(self.centroids_prev[:, np.newaxis, :] - centroids, axis=2)
         filtered_dist = distances[np.where(distances[:, 0] < thresh)[0]]
@@ -84,8 +84,8 @@ class ObjectDetect:
 
             intersection = [(C1 * B - C * B1) / det, (C * A1 - C1 * A) / det]
 
-            print(np.linalg.norm(intersection))
-            if np.linalg.norm(intersection) <= 2.5:
+            # print(np.linalg.norm(intersection))
+            if np.linalg.norm(intersection) <= 1.5:
                 relevant_indices = np.append(relevant_indices, i)
 
             i += 1
@@ -100,11 +100,11 @@ class ObjectDetect:
             if self.timestamp_prev != 0.0 and timestamp - self.timestamp_prev <= 1:
                 matched_info = self.match_and_track(cluster_data, timestamp - self.timestamp_prev, speed)
                 # print(f'Matched: {len(matched_info)}')
-                for matched in matched_info:
-                    dist, sp, pos, direction = matched
-                    print(f'\nDistance: {dist}\nSpeed: {sp}\nPosition: {pos}\nDirection: {direction}\nVehicle direction: {dir}')
+                # for matched in matched_info:
+                #     dist, sp, pos, direction = matched
+                #     print(f'\nDistance: {dist}\nSpeed: {sp}\nPosition: {pos}\nDirection: {direction}\nVehicle direction: {dir}')
                 relevant_indices = self.analyze_relevancy(matched_info, dir)
-                print(f'Relevant: {len(relevant_indices)}')
+                # print(f'Relevant: {len(relevant_indices)}')
                 self.timestamp_prev = timestamp
                 return matched_info, relevant_indices
             else:
