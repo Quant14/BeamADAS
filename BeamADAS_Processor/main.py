@@ -15,12 +15,12 @@ import matplotlib as plt
 wait_timeout = 20
 
 # MAIN PROCESS ---------------------------------
-def main_process(init_event, quit_event, speed, cam, cam_event, lidar, lidar_size, veh_dir, cam_timestamp, timestamp, lidar_event, uss, uss_event, gear, blind, blind_event, cam_last_brake, lidar_last_brake):
+def main_process(init_event, quit_event, speed, cam, cam_event, lidar, lidar_size, veh_dir, accX, cam_timestamp, timestamp, lidar_event, uss, uss_event, gear, blind, blind_event, cam_last_brake, lidar_last_brake):
     socket = comm.Comm(0)
     try:
         while not quit_event.is_set():
             # print('Waiting for message...')
-            data_type, data_len, curr_time, curr_dir, curr_gear, data = socket.recv_data()
+            data_type, data_len, curr_time, curr_dir, curr_gear, accel, data = socket.recv_data()
 
             if data_type != None and data != None:
                 if data_type == b'S':
@@ -48,6 +48,7 @@ def main_process(init_event, quit_event, speed, cam, cam_event, lidar, lidar_siz
                     # print('Recv lidar')
                     with lidar.get_lock():
                         timestamp.value = curr_time
+                        accX.value = accel
                         veh_dir[:] = curr_dir
                         lidar[:data_len] = data
                         lidar_size.value = data_len
@@ -120,7 +121,7 @@ def cam_process(init_event, quit_event, speed, cam, timestamp, event, cam_last_b
         socket.close()
 
 # LIDAR PROCESS --------------------------------
-def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, timestamp, lidar_event, cam_last_brake, lidar_last_brake):
+def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, accX, timestamp, lidar_event, cam_last_brake, lidar_last_brake):
     init_event.wait()
     print('Lidar starting')
     socket = comm.Comm(2)
@@ -128,6 +129,7 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, tim
         curr_speed = 0.0
         curr_dir = [0.0, 0.0]
         curr_time = 0.0
+        curr_accX = 0.0
         curr_data = np.array([], dtype=np.float32)
         od = ObjectDetect()
 
@@ -148,12 +150,13 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, tim
             with lidar.get_lock():
                 curr_dir = veh_dir[:]
                 curr_time = timestamp.value
+                curr_accX = accX.value
                 curr_data = np.frombuffer(lidar.get_obj(), dtype=np.float32, count=2400).reshape(800, 3)
                 curr_data = curr_data[:(lidar_size.value // 12)]
             with speed.get_lock():
                 curr_speed = speed.value
 
-            matched_info, relevant_indices = od.lidar_pipeline(curr_data, curr_time, curr_speed, curr_dir)
+            matched_info, relevant_indices = od.lidar_pipeline(curr_data, curr_time, curr_speed, curr_dir, curr_accX)
             max_brake = 0.0
             min_throttle = 100.0
             if (relevant_indices is not None and matched_info is not None) and (len(relevant_indices) > 0 and len(matched_info) > 0):
@@ -299,6 +302,7 @@ def main():
         lidar = mp.Array('b', 9600, lock=True)
         lidar_size = mp.Value('i', 0)
         veh_dir = mp.Array('f', 2)
+        accX = mp.Value('f', 0.0)
         timestamp = mp.Value('f', 0.0)
         lidar_event = mp.Event()
         lidar_last_brake = mp.Value('f', 0.0, lock=True)
@@ -313,9 +317,9 @@ def main():
         init_event = mp.Event()
         quit_event = mp.Event()
 
-        main_proc = mp.Process(target=main_process, args=(init_event, quit_event, speed, cam, cam_event, lidar, lidar_size, veh_dir, cam_timestamp, timestamp, lidar_event, uss, uss_event, gear, blind, blind_event, cam_last_brake, lidar_last_brake))
+        main_proc = mp.Process(target=main_process, args=(init_event, quit_event, speed, cam, cam_event, lidar, lidar_size, veh_dir, accX, cam_timestamp, timestamp, lidar_event, uss, uss_event, gear, blind, blind_event, cam_last_brake, lidar_last_brake))
         cam_proc = mp.Process(target=cam_process, args=(init_event, quit_event, speed, cam, cam_timestamp, cam_event, cam_last_brake, lidar_last_brake))
-        lidar_proc = mp.Process(target=lidar_process, args=(init_event, quit_event, speed, lidar, lidar_size, veh_dir, timestamp, lidar_event, cam_last_brake, lidar_last_brake))
+        lidar_proc = mp.Process(target=lidar_process, args=(init_event, quit_event, speed, lidar, lidar_size, veh_dir, accX, timestamp, lidar_event, cam_last_brake, lidar_last_brake))
         uss_proc = mp.Process(target=uss_process, args=(init_event, quit_event, uss, uss_event, timestamp, gear))
         blind_proc = mp.Process(target=blind_process, args=(init_event, quit_event, blind, blind_event))
 

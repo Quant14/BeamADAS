@@ -1,4 +1,5 @@
 import numpy as np
+import sympy as sp
 from sklearn.cluster import DBSCAN
 from scipy.optimize import linear_sum_assignment
 
@@ -64,51 +65,57 @@ class ObjectDetect:
 
         return matched_info
 
-    def analyze_relevancy(self, matched_info, veh_dir):
-        A = -veh_dir[0] / veh_dir[1]
-        B = -1
-        C = 0
+    def analyze_relevancy(self, matched_info, veh_dir, accX):
+        x, y = sp.symbols('x y')
+
+        cubic_equation = sp.Eq(y, accX * x**3)
+        theta = 1.5708 - np.arctan2(veh_dir[1], veh_dir[0])
+
+        rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)],
+                                    [np.sin(theta), -np.cos(theta)]], dtype=np.float32)
 
         relevant_indices = np.array([], dtype=np.uint8)
         i = 0
 
-        for dist, sp, pos, dir in matched_info:
+        for dist, speed, pos, dir in matched_info:
             if np.dot(dir / np.linalg.norm(dir), veh_dir) > -0.7:
             #    print(f'Veh dir: {veh_dir}')
                continue
-            A1 = -dir[1]
-            B1 = dir[0]
-            C1 = -B1 * pos[1] + dir[1] * pos[0] # optimized A1 to eliminate double negative
 
-            det = A * B1 - A1 * B
+            pivoted_pos = np.dot(rotation_matrix, pos)
+            pivoted_dir = np.dot(rotation_matrix, dir)
 
-            intersection = [(C1 * B - C * B1) / det, (C * A1 - C1 * A) / det]
+            A = -pivoted_dir[1]
+            B = pivoted_dir[0]
+            C = -B * pivoted_pos[1] + dir[1] * pivoted_pos[0] # optimized A1 to eliminate double negative
 
-            # print(np.linalg.norm(intersection))
-            if np.linalg.norm(intersection) <= 1.5:
-                relevant_indices = np.append(relevant_indices, i)
+            line_equation = sp.Eq(0, A * x + B * y + C)
+
+            intersection_equation = cubic_equation.subs(y, (-A * x - C) / B)
+
+            intersection_x = sp.solve(intersection_equation, x)
+
+            intersection_points = [(x_val, cubic_equation.subs(x, x_val)) for x_val in intersection_x]
+
+            for intersection in intersection_points:
+                if np.linalg.norm(intersection) < 1.5:
+                    relevant_indices = np.append(relevant_indices, i)
+                    break
 
             i += 1
 
         return relevant_indices
 
-    def lidar_pipeline(self, lidar_data, timestamp, speed, dir):
+    def lidar_pipeline(self, lidar_data, timestamp, speed, dir, accX):
         cluster_data = self.find_clusters(lidar_data)
 
         if len(cluster_data) > 0:
-            # print(f'Clusters: {len(cluster_data)}')
             if self.timestamp_prev != 0.0 and timestamp - self.timestamp_prev <= 1:
                 matched_info = self.match_and_track(cluster_data, timestamp - self.timestamp_prev, speed)
-                # print(f'Matched: {len(matched_info)}')
-                # for matched in matched_info:
-                #     dist, sp, pos, direction = matched
-                #     print(f'\nDistance: {dist}\nSpeed: {sp}\nPosition: {pos}\nDirection: {direction}\nVehicle direction: {dir}')
-                relevant_indices = self.analyze_relevancy(matched_info, dir)
-                # print(f'Relevant: {len(relevant_indices)}')
+                relevant_indices = self.analyze_relevancy(matched_info, dir, accX)
                 self.timestamp_prev = timestamp
                 return matched_info, relevant_indices
             else:
                 self.centroids_prev = np.array([np.mean(obj, axis=0) for obj in cluster_data])
                 self.timestamp_prev = timestamp
-                return None, None
         return None, None
