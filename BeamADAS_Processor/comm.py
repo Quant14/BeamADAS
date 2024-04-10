@@ -27,7 +27,7 @@ class Comm:
 
     def recv_data(self):
         recv = self.conn.recv(1)
-        if len(recv) < 1: return None, None, None, None, None, None
+        if len(recv) < 1: return None, None, None, None, None, None, None
 
         data_len = 0
         timestamp = 0.0
