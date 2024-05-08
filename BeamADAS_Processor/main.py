@@ -265,7 +265,7 @@ def blind_process(init_event, quit_event, blind, blind_event):
     print('Blind starting')
     socket = comm.Comm(4)
     try:
-        curr_data = np.array(2, dtype=np.float32)
+        curr_data = np.array(4, dtype=np.float32)
 
         while not quit_event.is_set():
             # print('Blind: Waiting...')
@@ -283,7 +283,7 @@ def blind_process(init_event, quit_event, blind, blind_event):
                 curr_data = np.frombuffer(blind.get_obj(), dtype=np.float32, count=2)
 
             # print(f'Left dist: {curr_data[0]}, Right dist: {curr_data[1]}')
-            socket.send_data(b'B', np.array([curr_data[0] < 2, curr_data[1] < 2]))
+            socket.send_data(b'B', np.array([curr_data[0] < 2 or curr_data[2] < 2, curr_data[1] < 2 or curr_data[3] < 2]))
     except Exception as e:
         traceback.print_exc()
     finally:
