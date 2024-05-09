@@ -49,7 +49,7 @@ class Comm:
             if len(recv) < 5: return None, None, None, None, None, None, None
 
             timestamp, gear = struct.unpack('>fc', recv)
-            data_len = 24
+            data_len = 32
         elif data_type == b'C':
             recv = self.conn.recv(4)
             if len(recv) < 4: return None, None, None, None, None, None, None

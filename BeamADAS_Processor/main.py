@@ -186,9 +186,9 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
     try:
         curr_time = 0.0
         curr_gear = b''
-        curr_data = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
-        rel_data = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-        prev_data = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+        curr_data = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
+        rel_data = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float32)
+        prev_data = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float32)
         prev_dir = 0
         prev_time = 0.0
         throttle = 100.0
@@ -209,19 +209,19 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
             with uss.get_lock():
                 curr_time = timestamp.value
                 curr_gear = gear.value
-                curr_data = np.frombuffer(uss.get_obj(), dtype=np.float32, count=6)
+                curr_data = np.frombuffer(uss.get_obj(), dtype=np.float32, count=8)
                 # print(f'Curr time: {curr_time}')
                 # print(f'Curr gear: {curr_gear}')
                 # print(f'Curr dtaa: {curr_data}')
 
             if curr_gear != b'N' and curr_gear != b'P':
                 if curr_gear != b'R':
-                    rel_data = curr_data[:3] - 0.1
+                    rel_data = curr_data[:4] - 0.1
                     if prev_dir != 1:
                         prev_dir = 1
                         prev_data[0] = -1.0
                 else:
-                    rel_data = curr_data[-3:]
+                    rel_data = curr_data[-4:]
                     if prev_dir != -1:
                         prev_dir = -1
                         prev_data[0] = -1.0
@@ -236,11 +236,11 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
                         max_speed = 0.0
                         dist = 1000.0
                         rel_data = np.clip(rel_data, a_min=0.0, a_max=3)
-                        for i in range(0, 3):
+                        for i in range(0, 4):
                             speed = (prev_data[i] - rel_data[i]) / d_time
                             if speed > max_speed:
                                 max_speed = speed
-                                dist = rel_data[i] - 0.2
+                                dist = rel_data[i] - 0.15
                                 break
 
                         # print(f'USS: Max closing speed: {max_speed}')
@@ -277,10 +277,10 @@ def blind_process(init_event, quit_event, blind, blind_event):
 
             # print('Blind: Processing...')
             with blind.get_lock():
-                curr_data = np.frombuffer(blind.get_obj(), dtype=np.float32, count=2)
+                curr_data = np.frombuffer(blind.get_obj(), dtype=np.float32, count=4)
 
             # print(f'Left dist: {curr_data[0]}, Right dist: {curr_data[1]}')
-            socket.send_data(b'B', np.array([curr_data[0] < 2, curr_data[1] < 2]))
+            socket.send_data(b'B', np.array([curr_data[0] < 2 or curr_data[2] < 2, curr_data[1] < 2 or curr_data[3] < 2]))
     except Exception as e:
         traceback.print_exc()
     finally:
@@ -304,7 +304,7 @@ def main():
         lidar_event = mp.Event()
         lidar_last_brake = mp.Value('f', 0.0, lock=True)
 
-        uss = mp.Array('B', 24, lock=True)
+        uss = mp.Array('B', 32, lock=True)
         uss_event = mp.Event()
         gear = mp.Value('c', b'N')
 
