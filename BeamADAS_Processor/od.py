@@ -20,11 +20,11 @@ class ObjectDetect:
             segment_data = lidar_data[segment_criteria]
             if len(segment_data) > 0:
                 if i == 0:
-                    dbscan = DBSCAN(eps=0.5, min_samples=30, n_jobs=1, algorithm='ball_tree') # near
+                    dbscan = DBSCAN(eps=0.6, min_samples=25, n_jobs=1, algorithm='ball_tree') # near
                 elif i == 1:
-                    dbscan = DBSCAN(eps=1, min_samples=12, n_jobs=1, algorithm='ball_tree') # middle
+                    dbscan = DBSCAN(eps=1.2, min_samples=15, n_jobs=1, algorithm='ball_tree') # middle
                 else:
-                    dbscan = DBSCAN(eps=1.5, min_samples=8, n_jobs=1, algorithm='ball_tree') # far
+                    dbscan = DBSCAN(eps=1.3, min_samples=10, n_jobs=1, algorithm='ball_tree') # far
 
                 clusters = dbscan.fit_predict(segment_data)
                 for cluster_id in np.unique(clusters[clusters != -1]):
@@ -38,11 +38,11 @@ class ObjectDetect:
     def match_and_track(self, cluster_data, elapsed, speed):
         centroids = np.array([np.mean(obj, axis=0) for obj in cluster_data])
 
-        thresh = elapsed * speed * 2
+        thresh = elapsed * speed
 
         distances = np.linalg.norm(self.centroids_prev[:, np.newaxis, :] - centroids, axis=2)
-
-        row_ind, col_ind = linear_sum_assignment(distances <= thresh)
+        filtered_dist = distances[np.where(distances[:, 0] < thresh)[0]]
+        row_ind, col_ind = linear_sum_assignment(filtered_dist)
         matched_clusters = np.column_stack((row_ind, col_ind))
 
         matched_info = [] # [[distance, speed, position, direction], [...], ...]
@@ -50,13 +50,16 @@ class ObjectDetect:
         for i, j in matched_clusters:
             prev_cluster = self.centroids_prev[i][:2]
             curr_cluster = centroids[j][:2]
+            # print(f'CLUSTER POS: {centroids[j]}')
 
-            movement_vector = prev_cluster - curr_cluster
+            movement_speed = distances[i, j] / elapsed
 
-            matched_info.append((np.linalg.norm(curr_cluster),
-                                 distances[i, j] / elapsed,
-                                 curr_cluster,
-                                 movement_vector[:2]))
+            if movement_speed < 120:
+                movement_vector = curr_cluster - prev_cluster
+                matched_info.append((np.linalg.norm(curr_cluster),
+                                    movement_speed,
+                                    curr_cluster,
+                                    movement_vector[:2]))
 
         self.centroids_prev = centroids
 
@@ -76,6 +79,7 @@ class ObjectDetect:
 
         for dist, speed, pos, dir in matched_info:
             if np.dot(dir / np.linalg.norm(dir), veh_dir) > -0.7:
+            #    print(f'Veh dir: {veh_dir}')
                continue
 
             pivoted_pos = np.dot(rotation_matrix, pos)
@@ -94,8 +98,8 @@ class ObjectDetect:
             intersection_points = [(x_val, cubic_equation.subs(x, x_val)) for x_val in intersection_x]
 
             for intersection in intersection_points:
-                if np.linalg.norm(intersection) < 1.25:
-                    np.append(relevant_indices, i)
+                if np.linalg.norm(intersection) < 1.5:
+                    relevant_indices = np.append(relevant_indices, i)
                     break
 
             i += 1
@@ -105,12 +109,13 @@ class ObjectDetect:
     def lidar_pipeline(self, lidar_data, timestamp, speed, dir, accX):
         cluster_data = self.find_clusters(lidar_data)
 
-        if self.timestamp_prev != 0.0 and timestamp - self.timestamp_prev <= 1:
-            matched_info = self.match_and_track(cluster_data, timestamp - self.timestamp_prev, speed)
-            relevant_indices = self.analyze_relevancy(matched_info, dir, accX)
-            self.timestamp_prev = timestamp
-            return matched_info, relevant_indices
-        else:
-            self.centroids_prev = np.array([np.mean(obj, axis=0) for obj in cluster_data])
-            self.timestamp_prev = timestamp
-            return None, None
+        if len(cluster_data) > 0:
+            if self.timestamp_prev != 0.0 and timestamp - self.timestamp_prev <= 1:
+                matched_info = self.match_and_track(cluster_data, timestamp - self.timestamp_prev, speed)
+                relevant_indices = self.analyze_relevancy(matched_info, dir, accX)
+                self.timestamp_prev = timestamp
+                return matched_info, relevant_indices
+            else:
+                self.centroids_prev = np.array([np.mean(obj, axis=0) for obj in cluster_data])
+                self.timestamp_prev = timestamp
+        return None, None

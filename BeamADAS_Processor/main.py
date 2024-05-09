@@ -10,6 +10,8 @@ import struct
 import traceback
 import time
 
+import matplotlib as plt
+
 wait_timeout = 20
 
 # MAIN PROCESS ---------------------------------
@@ -24,35 +26,35 @@ def main_process(init_event, quit_event, speed, cam, cam_event, lidar, lidar_siz
                 if data_type == b'S':
                     # print('Recv speed')
                     with speed.get_lock():
-                        speed.Value = struct.unpack('>f', data)[0]
+                        speed.value = struct.unpack('>f', data)[0]
                         with cam_last_brake.get_lock() and lidar_last_brake.get_lock():
-                            if speed.Value < 8.333:
-                                cam_last_brake.Value = 0
-                                lidar_last_brake.Value = 0
-                            elif speed.Value < 11.111:
-                                lidar_last_brake.Value = 0
+                            if speed.value < 8.333:
+                                cam_last_brake.value = 0
+                                lidar_last_brake.value = 0
+                            elif speed.value < 11.111:
+                                lidar_last_brake.value = 0
                 elif data_type == b'B':
                     # print('Recv blind')
                     with blind.get_lock():
                         blind[:] = data
                     blind_event.set()
                 elif data_type == b'C':
-                    print('Recv cam')
+                    # print('Recv cam')
                     with cam.get_lock():
                         cam[:] = data
-                        cam_timestamp.Value = curr_time
+                        cam_timestamp.value = curr_time
                     cam_event.set()
                 elif data_type == b'L':
-                    print('Recv lidar')
+                    # print('Recv lidar')
                     with lidar.get_lock():
-                        timestamp.Value = curr_time
+                        timestamp.value = curr_time
                         accX.value = accel
                         veh_dir[:] = curr_dir
                         lidar[:data_len] = data
-                        lidar_size.Value = data_len
+                        lidar_size.value = data_len
                     lidar_event.set()
                 elif data_type == b'P':
-                    print('Recv park')
+                    # print('Recv park')
                     with uss.get_lock():
                         uss[:] = data
                         timestamp.value = curr_time
@@ -79,7 +81,7 @@ def cam_process(init_event, quit_event, speed, cam, timestamp, event, cam_last_b
     try:
         curr_time = 0.0
         while not quit_event.is_set():
-            print('Cam: Waiting...')
+            # print('Cam: Waiting...')
             t = time.time()
             event.wait(timeout=wait_timeout)
             if time.time() - t >= wait_timeout:
@@ -89,28 +91,29 @@ def cam_process(init_event, quit_event, speed, cam, timestamp, event, cam_last_b
                     continue
             event.clear()
 
-            print('Cam: Processing...')
+            # print('Cam: Processing...')
             with cam.get_lock():
                 img = np.frombuffer(cam.get_obj(), dtype=np.uint8).reshape((720, 1280))
-                curr_time = timestamp.Value
+                curr_time = timestamp.value
 
             with speed.get_lock():
-                curr_speed = speed.Value
+                curr_speed = speed.value
 
             radius = lc.lane_pipeline(img, curr_time)
             if radius != None:
-                max_speed = math.sqrt(4.905 * radius) * (3.6 + 0.4) # type: ignore
-                print(f'Cam: Max speed: {max_speed}')
+                max_speed = math.sqrt(4.905 * radius) # type: ignore
+                # print(f'Cam: Max speed: {max_speed}')
 
                 throttle, brake = sc.cam_speed_control(5, curr_speed, max_speed)
-                print(f'Cam: Throttle: {throttle}, Brake: {brake}')
+                # print(f'Cam: Throttle: {throttle}, Brake: {brake}')
 
                 with lidar_last_brake.get_lock():
-                    if lidar_last_brake.Value <= brake:
+                    if lidar_last_brake.value <= brake:
+                        brake = (brake + cam_last_brake.value) / 2 # avg
                         socket.send_data(b'I', np.array([throttle, brake], dtype=np.float32))
 
                 with cam_last_brake.get_lock():
-                    cam_last_brake.Value = brake
+                    cam_last_brake.value = brake
 
     except Exception as e:
         traceback.print_exc()
@@ -131,7 +134,7 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, acc
         od = ObjectDetect()
 
         while not quit_event.is_set():
-            print('Lidar: Waiting...')
+            # print('Lidar: Waiting...')
             t = time.time()
             lidar_event.wait(timeout=wait_timeout)
             if time.time() - t >= wait_timeout:
@@ -143,21 +146,21 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, acc
                 break
             lidar_event.clear()
 
-            print('Lidar: Processing...')
+            # print('Lidar: Processing...')
             with lidar.get_lock():
                 curr_dir = veh_dir[:]
-                curr_time = timestamp.Value
+                curr_time = timestamp.value
                 curr_accX = accX.value
-                curr_data = np.frombuffer(lidar.get_obj(), dtype=np.float32, count=lidar_size.Value).reshape(lidar_size.Value // 3, 3)
-
+                curr_data = np.frombuffer(lidar.get_obj(), dtype=np.float32, count=2400).reshape(800, 3)
+                curr_data = curr_data[:(lidar_size.value // 12)]
             with speed.get_lock():
-                curr_speed = speed.Value
+                curr_speed = speed.value
 
             matched_info, relevant_indices = od.lidar_pipeline(curr_data, curr_time, curr_speed, curr_dir, curr_accX)
             max_brake = 0.0
             min_throttle = 100.0
-            if relevant_indices != None and matched_info != None:
-                print('Lidar: Found risk objects')
+            if (relevant_indices is not None and matched_info is not None) and (len(relevant_indices) > 0 and len(matched_info) > 0):
+                # print('Lidar: Found risk objects')
                 for i in relevant_indices:
                     dist, sp, pos, dir = matched_info[i]
                     throttle, brake = sc.lidar_speed_control(dist, curr_speed, curr_speed - sp)
@@ -167,11 +170,11 @@ def lidar_process(init_event, quit_event, speed, lidar, lidar_size, veh_dir, acc
 
             print(f'Lidar: Throttle: {min_throttle}, Brake: {max_brake}')
             with cam_last_brake.get_lock():
-                if cam_last_brake.Value <= max_brake or curr_speed < 11.111:
+                with lidar_last_brake.get_lock():
+                    max_brake = (max_brake + lidar_last_brake.value) / 2 # avg
+                    lidar_last_brake.value = max_brake
+                if cam_last_brake.value <= max_brake or curr_speed < 11.111:
                     socket.send_data(b'I', np.array([min_throttle, max_brake], dtype=np.float32))
-
-            with lidar_last_brake.get_lock():
-                lidar_last_brake.Value = max_brake
 
     except Exception as e:
         traceback.print_exc()
@@ -195,7 +198,7 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
         brake = 0.0
 
         while not quit_event.is_set():
-            print('USS: Waiting...')
+            # print('USS: Waiting...')
             t = time.time()
             uss_event.wait(timeout=wait_timeout)
             if time.time() - t >= wait_timeout:
@@ -205,7 +208,7 @@ def uss_process(init_event, quit_event, uss, uss_event, timestamp, gear):
                     continue
             uss_event.clear()
 
-            print('USS: Processing...')
+            # print('USS: Processing...')
             with uss.get_lock():
                 curr_time = timestamp.value
                 curr_gear = gear.value
@@ -262,7 +265,7 @@ def blind_process(init_event, quit_event, blind, blind_event):
     print('Blind starting')
     socket = comm.Comm(4)
     try:
-        curr_data = np.array(2, dtype=np.float32)
+        curr_data = np.array(4, dtype=np.float32)
 
         while not quit_event.is_set():
             # print('Blind: Waiting...')
@@ -321,24 +324,22 @@ def main():
         blind_proc = mp.Process(target=blind_process, args=(init_event, quit_event, blind, blind_event))
 
         main_proc.start()
-        # cam_proc.start()
-        # lidar_proc.start()
+        cam_proc.start()
+        lidar_proc.start()
         uss_proc.start()
         blind_proc.start()
 
         print('All systems started')
 
         main_proc.join()
-        # cam_proc.join()
-        # lidar_proc.join()
+        cam_proc.join()
+        lidar_proc.join()
         uss_proc.join()
         blind_proc.join()
 
         print('All systems shut down')
     except Exception as e:
         traceback.print_exc()
-    finally:
-        print('done')
 
 if __name__ == '__main__':
     main()

@@ -21,7 +21,6 @@ class Comm:
     def send_data(self, type, data):
         if type == b'I':
             self.socket.sendall(struct.pack('>cff', type, data[0], data[1]))
-            print(data)
         elif type == b'B':
             self.socket.sendall(struct.pack('>c??', type, data[0], data[1]))
 
