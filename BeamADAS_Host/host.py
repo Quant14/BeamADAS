@@ -19,7 +19,6 @@ def init(sp, ai, traffic, launch):
     if launch:
         # Create vehicles
         vehicle = Vehicle('ego_vehicle', model='etk800', license='ADAS', color=(0.31, 0.33, 0.24, 1))
-        vehicle2 = Vehicle('lidar_vehicle', model='etki', license='LIDAR', color=(0.5, 0.5, 0.5, 1))
 
         # Load map and spawn vehicle
         if sp == 'sp1' or sp == 'sp1_no_traffic':
@@ -31,6 +30,7 @@ def init(sp, ai, traffic, launch):
         elif sp == 'sp0':
             scenario = Scenario('smallgrid', 'BeamADAS')
             scenario.add_vehicle(vehicle, pos=(0, 0, 0.206))
+            vehicle2 = Vehicle('lidar_vehicle', model='etki', license='LIDAR', color=(0.5, 0.5, 0.5, 1))
             scenario.add_vehicle(vehicle2, pos=(0, -150, 0.206))
 
         # Load scenario
@@ -68,14 +68,14 @@ def init(sp, ai, traffic, launch):
                     frequency=30,
                     horizontal_angle=20,
                     max_distance=100,
-                    is_visualised=True,
+                    is_visualised=False,
                     is_streaming=True)
-        uss_f = Ultrasonic('uss_f',
+        uss_fl1 = Ultrasonic('uss_fl1',
                         bng,
                         vehicle,
                         requested_update_time=0.067,
-                        pos=(0, -2.3, 0.4),
-                        dir=(0, -1, 0),
+                        pos=(0.25, -2.28, 0.4),
+                        dir=(0.15, -0.85, 0.1),
                         field_of_view_y=30,
                         near_far_planes=(0.1, 3.0),
                         range_min_cutoff=0.1,
@@ -83,12 +83,12 @@ def init(sp, ai, traffic, launch):
                         sensitivity=0.003,
                         is_visualised=False,
                         is_streaming=True)
-        uss_fl = Ultrasonic('uss_fl',
+        uss_fl2 = Ultrasonic('uss_fl2',
                         bng,
                         vehicle,
                         requested_update_time=0.067,
                         pos=(0.78, -2.0, 0.4),
-                        dir=(0.5, -0.5, 0),
+                        dir=(0.5, -0.5, 0.1),
                         field_of_view_y=30,
                         near_far_planes=(0.1, 3.0),
                         range_min_cutoff=0.1,
@@ -96,12 +96,25 @@ def init(sp, ai, traffic, launch):
                         sensitivity=0.003,
                         is_visualised=False,
                         is_streaming=True)
-        uss_fr = Ultrasonic('uss_fr',
+        uss_fr1 = Ultrasonic('uss_fr1',
+                        bng,
+                        vehicle,
+                        requested_update_time=0.067,
+                        pos=(-0.25, -2.28, 0.4),
+                        dir=(-0.15, -0.85, 0.1),
+                        field_of_view_y=30,
+                        near_far_planes=(0.1, 3.0),
+                        range_min_cutoff=0.1,
+                        range_direct_max_cutoff=3.0,
+                        sensitivity=0.003,
+                        is_visualised=False,
+                        is_streaming=True)
+        uss_fr2 = Ultrasonic('uss_fr2',
                         bng,
                         vehicle,
                         requested_update_time=0.067,
                         pos=(-0.78, -2.0, 0.4),
-                        dir=(-0.5, -0.5, 0),
+                        dir=(-0.5, -0.5, 0.1),
                         field_of_view_y=30,
                         near_far_planes=(0.1, 3.0),
                         range_min_cutoff=0.1,
@@ -109,12 +122,12 @@ def init(sp, ai, traffic, launch):
                         sensitivity=0.003,
                         is_visualised=False,
                         is_streaming=True)
-        uss_r = Ultrasonic('uss_r',
+        uss_rl1 = Ultrasonic('uss_rl1',
                         bng,
                         vehicle,
                         requested_update_time=0.067,
-                        pos=(0, 2.4, 0.4),
-                        dir=(0, 1, 0),
+                        pos=(0.25, 2.4, 0.4),
+                        dir=(0.15, 0.85, 0.1),
                         field_of_view_y=30,
                         near_far_planes=(0.1, 3.0),
                         range_min_cutoff=0.1,
@@ -122,12 +135,12 @@ def init(sp, ai, traffic, launch):
                         sensitivity=0.003,
                         is_visualised=False,
                         is_streaming=True)
-        uss_rl = Ultrasonic('uss_rl',
+        uss_rl2 = Ultrasonic('uss_rl2',
                         bng,
                         vehicle,
                         requested_update_time=0.067,
                         pos=(0.8, 2.1, 0.4),
-                        dir=(0.5, 0.5, 0),
+                        dir=(0.5, 0.5, 0.1),
                         field_of_view_y=30,
                         near_far_planes=(0.1, 3.0),
                         range_min_cutoff=0.1,
@@ -135,12 +148,25 @@ def init(sp, ai, traffic, launch):
                         sensitivity=0.003,
                         is_visualised=False,
                         is_streaming=True)
-        uss_rr = Ultrasonic('uss_rr',
+        uss_rr1 = Ultrasonic('uss_rr1',
+                        bng,
+                        vehicle,
+                        requested_update_time=0.067,
+                        pos=(-0.25, 2.4, 0.4),
+                        dir=(-0.15, 0.85, 0.1),
+                        field_of_view_y=30,
+                        near_far_planes=(0.1, 3.0),
+                        range_min_cutoff=0.1,
+                        range_direct_max_cutoff=3.0,
+                        sensitivity=0.003,
+                        is_visualised=False,
+                        is_streaming=True)
+        uss_rr2 = Ultrasonic('uss_rr2',
                         bng,
                         vehicle,
                         requested_update_time=0.067,
                         pos=(-0.8, 2.1, 0.4),
-                        dir=(-0.5, 0.5, 0),
+                        dir=(-0.5, 0.5, 0.1),
                         field_of_view_y=30,
                         near_far_planes=(0.1, 3.0),
                         range_min_cutoff=0.1,
@@ -202,17 +228,19 @@ def init(sp, ai, traffic, launch):
 
         return home, bng, scenario, vehicle, None, None, None, None, None, None, None, None, None, None, None, None
 
-    return home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer
+    return home, bng, scenario, vehicle, camera, lidar, uss_fl1, uss_fl2, uss_fr1, uss_fr2, uss_rl1, uss_rl2, uss_rr1, uss_rr2, uss_left, uss_right, electrics, timer
 
-def destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer):
+def destroy(home, bng, scenario, vehicle, camera, lidar, uss_fl1, uss_fl2, uss_fr1, uss_fr2, uss_rl1, uss_rl2, uss_rr1, uss_rr2, uss_left, uss_right, electrics, timer):
     camera.remove()
     lidar.remove()
-    uss_f.remove()
-    uss_fl.remove()
-    uss_fr.remove()
-    uss_r.remove()
-    uss_rl.remove()
-    uss_rr.remove()
+    uss_fl1.remove()
+    uss_fl2.remove()
+    uss_fr1.remove()
+    uss_fr2.remove()
+    uss_rl1.remove()
+    uss_rl2.remove()
+    uss_rr1.remove()
+    uss_rr2.remove()
     uss_left.remove()
     uss_right.remove()
     vehicle.detach_sensor('electrics')

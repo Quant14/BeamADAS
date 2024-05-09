@@ -21,11 +21,12 @@ from beamngpy.tools import OpenDriveExporter
 # dirs = ['sp1', 'sp1_no_traffic', 'sp2', 'sp2_no_traffic']
 # dirs = ['sp2_no_traffic']
 
-home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp0', False, False, True)
+home, bng, scenario, vehicle, camera, lidar, uss_fl1, uss_fl2, uss_fr1, uss_fr2, uss_rl1, uss_rl2, uss_rr1, uss_rr2, uss_left, uss_right, electrics, timer = host.init('sp1', False, True, True)
 vehicle.sensors.poll('electrics', 'timer', 'state')
 
 while electrics.data['running']:
-    vehicle.sensors.poll('state', 'timer')
+    # print(electrics.data['accXSmooth'])
+    vehicle.sensors.poll('electrics')
 # lidar_data_readonly = lidar.stream()
 # pos = np.array([vehicle.state['pos'][0], vehicle.state['pos'][1] - 2.25, vehicle.state['pos'][2] + 0.6])
 # direction = vehicle.state['dir']
@@ -243,4 +244,4 @@ while electrics.data['running']:
 # print(time.time() - t1)
 # ssh.close()
 
-host.destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer)
+host.destroy(home, bng, scenario, vehicle, camera, lidar, uss_fl1, uss_fl2, uss_fr1, uss_fr2, uss_rl1, uss_rl2, uss_rr1, uss_rr2, uss_left, uss_right, electrics, timer)

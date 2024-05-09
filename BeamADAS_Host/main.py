@@ -14,7 +14,7 @@ import traceback
 import random
 
 def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, ready_blind_event, exit_event):
-    home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp1', False, False, True)
+    home, bng, scenario, vehicle, camera, lidar, uss_fl1, uss_fl2, uss_fr1, uss_fr2, uss_rl1, uss_rl2, uss_rr1, uss_rr2, uss_left, uss_right, electrics, timer = host.init('sp0', False, False, True)
 
     adas_state = 0 # states: 0 = off, 1 = on, 2 = ready, 3 = active
     prev_state = 0
@@ -24,6 +24,8 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
 
     vehicle.sensors.poll('electrics')
     second = 0
+
+    time.sleep(5)
 
     print('Starting receivers...')
     ready_event.set()
@@ -45,9 +47,9 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
         ready_blind_event.wait()
 
         print('Initiating Pi4...')
-        host.send_data(socket, b'I', None, None, None, b'init')
+        host.send_data(socket, b'I', None, None, None, None, b'init')
 
-        time.sleep(5)
+        time.sleep(2)
 
         print('Simulation running.')
         while(electrics.data['running']):
@@ -58,11 +60,11 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
             vehicle.sensors.poll('electrics')
             speed = electrics.data['wheelspeed']
 
-            host.send_data(socket, b'S', None, None, None, speed)
+            host.send_data(socket, b'S', None, None, None, None, speed)
 
             # Get ADAS sensors data
             if speed > 5.555 and not electrics.data['hazard_signal'] and not electrics.data['left_signal'] and not electrics.data['right_signal']: # Speed for LiDAR
-                vehicle.sensors.poll('state', 'timer')
+                vehicle.sensors.poll('electrics', 'state', 'timer')
                 lidar_data_readonly = lidar.stream()
                 pos = np.array([vehicle.state['pos'][0], vehicle.state['pos'][1] - 2.25, vehicle.state['pos'][2] + 0.6])
                 direction = vehicle.state['dir']
@@ -81,11 +83,11 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
 
                 lidar_data = lidar_data[np.dot(lidar_data, direction) >= 0].astype(np.float32)
                 direction = np.array(direction[:2], dtype=np.float32)
-                host.send_data(socket, b'L', timer['time'], direction[:2], None, lidar_data.tobytes())
+                host.send_data(socket, b'L', timer['time'], direction[:2], None, -electrics.data['accXSmooth'], lidar_data.tobytes())
                 adas_state = 3
 
             if second % 2 == 0:
-                if speed > 11.111 and not electrics.data['hazard_signal'] and not electrics.data['left_signal'] and not electrics.data['right_signal']: # Speed for camera
+                if speed > 5.555 and not electrics.data['hazard_signal'] and not electrics.data['left_signal'] and not electrics.data['right_signal']: # Speed for camera
                     vehicle.sensors.poll('timer')
                     camera_data = camera.stream_colour(3686400)
                     camera_data = np.array(camera_data).reshape(height, width, 4)
@@ -93,19 +95,19 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
 
                     img = camera_data.tobytes()
 
-                    host.send_data(socket, b'C', timer['time'], None, None, img)
+                    host.send_data(socket, b'C', timer['time'], None, None, None, img)
                     adas_state = 3
                 elif speed < 5.555: # Parking speed
                     vehicle.sensors.poll('electrics', 'timer')
-                    park_data = np.array([uss_f.stream()[0], uss_fl.stream()[0], uss_fr.stream()[0],
-                            uss_r.stream()[0], uss_rl.stream()[0], uss_rr.stream()[0]], dtype=np.float32)
-                    host.send_data(socket, b'P', timer['time'], None, electrics.data['gear'].encode(), park_data.tobytes())
+                    park_data = np.array([uss_fl1.stream()[0], uss_fl2.stream()[0], uss_fr1.stream()[0], uss_fr2.stream()[0],
+                                        uss_rl1.stream()[0], uss_rl2.stream()[0], uss_rr1.stream()[0], uss_rr2.stream()[0]], dtype=np.float32)
+                    host.send_data(socket, b'P', timer['time'], None, electrics.data['gear'].encode(), None, park_data.tobytes())
                     adas_state = 3
 
                 if second % 6 == 0:
                     # Blind spot detection
-                    blind_data = np.array([uss_left.stream(), uss_right.stream()], dtype=np.float32)
-                    host.send_data(socket, b'B', None, None, None, blind_data.tobytes())
+                    blind_data = np.array([uss_left.stream(), uss_right.stream(), uss_rl2.stream(), uss_rr2.stream()], dtype=np.float32)
+                    host.send_data(socket, b'B', None, None, None, None, blind_data.tobytes())
 
                 if second % 30 == 0:
                     if prev_state == 3 and adas_state == 2:
@@ -120,20 +122,20 @@ def sender(ready_event, ready_cam_event, ready_lidar_event, ready_uss_event, rea
     except Exception as e:
         traceback.print_exc()
     finally:
-        host.send_data(socket, b'Q', None, None, None, b'')
+        host.send_data(socket, b'Q', None, None, None, None, b'')
         exit_event.set()
         print('Exiting...')
         adas_state = 0
         time.sleep(3)
         socket.close()
-        host.destroy(home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer)
+        host.destroy(home, bng, scenario, vehicle, camera, lidar, home, bng, scenario, vehicle, camera, lidar, uss_fl1, uss_fl2, uss_fr1, uss_fr2, uss_rl1, uss_rl2, uss_rr1, uss_rr2, uss_left, uss_right, electrics, timer, uss_left, uss_right, electrics, timer)
 
 def receiver(proc, ready_event, ready_back_event, exit_event):
     try:
         print(f'Receiver {proc} waiting for sender...')
         ready_event.wait()
         print(f'Starting receiver {proc}...')
-        time.sleep(random.random() % 2)
+        time.sleep(random.random() % 5)
         home, bng, scenario, vehicle, camera, lidar, uss_f, uss_fl, uss_fr, uss_r, uss_rl, uss_rr, uss_left, uss_right, electrics, timer = host.init('sp0', False, False, False)
 
         print(f'Receiver {proc} opening connection...')
@@ -143,7 +145,7 @@ def receiver(proc, ready_event, ready_back_event, exit_event):
         ready_back_event.set()
         print('Waiting for connection...')
         socket.listen()
-        socket.settimeout(20)
+        socket.settimeout(30)
         conn, addr = socket.accept()
         print(f'Receiver {proc} operational...')
         while not exit_event.is_set():
@@ -155,7 +157,7 @@ def receiver(proc, ready_event, ready_back_event, exit_event):
                 else:
                     continue
             if response_type == b'I':
-                # print('Braking!')
+                # print(f'Braking at {int(response_2 * 100)}%')
                 vehicle.control(throttle=response_1)
                 vehicle.control(brake=response_2)
             elif response_type == b'B':
