@@ -55,7 +55,7 @@ class LaneCurve:
         if len(peak_bounds) < 2:
             return None, None, None, None
 
-        gap_sizes = np.diff([peak[-1] for peak in peak_bounds])
+        gap_sizes = np.diff([np.average(peak) for peak in peak_bounds])
         max_gap_index = np.argmax(gap_sizes)
 
         if gap_sizes[max_gap_index] < 200:
