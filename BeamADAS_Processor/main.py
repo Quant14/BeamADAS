@@ -10,8 +10,6 @@ import struct
 import traceback
 import time
 
-import matplotlib as plt
-
 wait_timeout = 20
 
 # MAIN PROCESS ---------------------------------

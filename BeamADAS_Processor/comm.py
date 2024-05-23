@@ -1,6 +1,5 @@
 import socket
 import struct
-import time
 
 class Comm:
     def __init__(self, proc):
