@@ -17,6 +17,8 @@ The host uses BeamNGpy to get live sensor data from BeamNG.tech and send it to t
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/beamadas_diagram.png?raw=true">
 
 ## Progress log
+#### 28th May 2024
+The project's main goals have been achieved. Its functionalities have a lot of room for improvement but it is a solid proof of concept that a realistic multi-process multi-device ADAS system can be implemented to work with BeamNG.tech. 
 #### 1st Mar 2024
 The progress log of the project is NOT up to date. The project is in active development with big progress steps pushing it towards completion. 
 #### 1-3rd Nov 2023
