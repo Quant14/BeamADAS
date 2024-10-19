@@ -1,20 +1,26 @@
 # BeamADAS
 This is a project, aimed at developing a realistic ADAS system using BeamNG.tech as a platform for accurate vehicle simulation.
 
-## Goals of the ADAS system
+## Achieved goals of the ADAS system
 1. Detect road curvature and slow down if the vehicle speed is too high.
-2. Smoothly reduce the closing speed to an object in the current road lane to 0 and continue driving, following from a safe distance for the current speed.
+2. Smoothly reduce the closing speed to an object in the current road lane to 0 and continue driving, following from a safe distance for the current speed. (Needs improvement)
 3. Indicate to the driver in case there is a car in either of the side mirrors' blind spots.
 4. If the vehicle is moving at a speed <12 kph (e.g. parking) and an ultrasonic sensor detects too low distance, brakes are applied to avoid contact with any objects.
-5. (Future) If the vehicle is exiting its road lane without using the relative indicator, slightly pull the steering back towards the current road lane.
-6. (Future) Track vehicle and other objects' trajectories for more accurate LiDAR system.
-7. (Future) Implement automatic system diagnostics in case of module failure.
+
+## Future goals of the ADAS system
+1. If the vehicle is exiting its road lane without using the relative indicator, slightly pull the steering back towards the current road lane.
+2. Track vehicle and other objects' trajectories for more accurate LiDAR system.
+3. Implement automatic system diagnostics in case of module failure.
+4. Implement sensor fusion for better system reliability and accuracy.
 
 ## Relation between host and processor
 The host uses BeamNGpy to get live sensor data from BeamNG.tech and send it to the processor (separate microcomputer, connected via USB). The processor analyzes the sensor data and sends back to the host if action needs to be taken and what (set pedal inputs to x%). The host can then apply those changes to the vehicle inputs inside the simulation (a small BeamNG mod package is required). 
 
 ## System diagram
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/beamadas_diagram.png?raw=true">
+
+## System functionality showcase
+https://drive.google.com/file/d/1-kpc4Zm62JhYyXtgd-EeHk4XUaeQwf4m/view?usp=sharing"
 
 ## Progress log
 #### 28th May 2024
@@ -70,11 +76,7 @@ https://github.com/OanaGaskey/Advanced-Lane-Detection
 
 LiDAR research, simple LiDAR setup in different situations. Screenshots made inside BeamNG.tech.
 
-<img src="https://github.com/Quant14/BeamADAS/blob/main/media/highway_hood.png?raw=true" width=60%>
-<img src="https://github.com/Quant14/BeamADAS/blob/main/media/highway_outside.png?raw=true" width=60%>
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/countryside_hood.png?raw=true" width=60%>
-<img src="https://github.com/Quant14/BeamADAS/blob/main/media/countryside_outside.png?raw=true" width=60%>
-<img src="https://github.com/Quant14/BeamADAS/blob/main/media/town_hood.png?raw=true" width=60%>
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/town_outside.png?raw=true" width=60%>
 
 Project organization and requirements, installation of BeamNG.tech and initial setup.
