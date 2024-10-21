@@ -20,7 +20,7 @@ The host uses BeamNGpy to get live sensor data from BeamNG.tech and send it to t
 <img src="https://github.com/Quant14/BeamADAS/blob/main/media/beamadas_diagram.png?raw=true">
 
 ## System functionality showcase
-https://drive.google.com/file/d/1-kpc4Zm62JhYyXtgd-EeHk4XUaeQwf4m/view?usp=sharing"
+https://drive.google.com/file/d/1-kpc4Zm62JhYyXtgd-EeHk4XUaeQwf4m/view?usp=sharing
 
 ## Progress log
 #### 28th May 2024
